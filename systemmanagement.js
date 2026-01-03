@@ -44,6 +44,7 @@ async function saveClinicSettings() {
                 if (listRes && listRes.success && Array.isArray(listRes.data)) {
                     clinicsList = listRes.data;
                 }
+                try { localStorage.setItem('clinics', JSON.stringify(clinicsList)); } catch (_eLs) {}
             } catch (_eList) {}
             updateClinicSettingsDisplay();
             try { populateClinicSelectors(); } catch (_ePop) {}

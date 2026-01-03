@@ -1631,7 +1631,28 @@ async function fetchUsers(forceRefresh = false) {
         let clinicSettings = {};
         let currentClinicId = localStorage.getItem('currentClinicId') || null;
         let clinicsList = [];
+        function prePopulateClinicsFromCache() {
+            try {
+                const stored = localStorage.getItem('clinics');
+                if (stored) {
+                    const local = JSON.parse(stored);
+                    if (Array.isArray(local) && local.length) {
+                        clinicsList = local;
+                        if (!currentClinicId) {
+                            currentClinicId = local[0].id;
+                            localStorage.setItem('currentClinicId', currentClinicId);
+                        }
+                        const found = local.find(c => String(c.id) === String(currentClinicId));
+                        clinicSettings = found || {};
+                        populateClinicSelectors();
+                        updateClinicSettingsDisplay();
+                        updateCurrentClinicDisplay();
+                    }
+                }
+            } catch (_e) {}
+        }
         async function initClinics() {
+            prePopulateClinicsFromCache();
             await waitForFirebase();
             let userLoggedIn = !!(window.firebase && window.firebase.auth && window.firebase.auth.currentUser);
             let res = null;
@@ -1834,6 +1855,7 @@ async function fetchUsers(forceRefresh = false) {
             updateClinicSettingsDisplay();
             updateCurrentClinicDisplay();
             try { populateClinicSelectors(); } catch (_e2) {}
+            try { localStorage.setItem('clinics', JSON.stringify(clinicsList)); } catch (_e3) {}
             try { loadTodayAppointments(); } catch (_e) {}
         }
         function updateCurrentClinicDisplay() {
@@ -20707,6 +20729,7 @@ class FirebaseDataManager {
             );
             const list = [];
             snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+            try { localStorage.setItem('clinics', JSON.stringify(list)); } catch (_e) {}
             return { success: true, data: list };
         } catch (err) {
             return { success: false, data: [] };
