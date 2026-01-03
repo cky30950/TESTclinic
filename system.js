@@ -1735,6 +1735,20 @@ async function fetchUsers(forceRefresh = false) {
                 }
             } catch (_e2) {}
             try {
+                const currentSel = document.getElementById('currentClinicSelector');
+                if (currentSel) {
+                    currentSel.innerHTML = clinicsList.map(c => `<option value="${c.id}">${c.chineseName || c.englishName || c.id}</option>`).join('');
+                    if (currentClinicId) currentSel.value = currentClinicId;
+                    // 避免重複綁定
+                    if (!currentSel.dataset.bound) {
+                        currentSel.addEventListener('change', function() {
+                            setCurrentClinicId(this.value);
+                        });
+                        currentSel.dataset.bound = 'true';
+                    }
+                }
+            } catch (_e3) {}
+            try {
                 const addBtn = document.getElementById('addClinicButton');
                 if (addBtn && !addBtn.dataset.bound) {
                     addBtn.addEventListener('click', async function() {
@@ -1772,8 +1786,12 @@ async function fetchUsers(forceRefresh = false) {
         function updateCurrentClinicDisplay() {
             const el = document.getElementById('currentClinicDisplay');
             if (el) {
-                el.textContent = clinicSettings && clinicSettings.chineseName ? `當前診所：${clinicSettings.chineseName}` : '';
+                el.textContent = '當前診所：';
             }
+            try {
+                const currentSel = document.getElementById('currentClinicSelector');
+                if (currentSel && currentClinicId) currentSel.value = currentClinicId;
+            } catch (_e) {}
         }
         
         // 浮動提示功能改用 Toastr 提供視覺與功能性提示
