@@ -1779,8 +1779,14 @@ async function fetchUsers(forceRefresh = false) {
             localStorage.setItem('currentClinicId', currentClinicId);
             const cur = await window.firebaseDataManager.getClinicById(currentClinicId);
             clinicSettings = cur && cur.success && cur.data ? cur.data : {};
+            try {
+                if (Array.isArray(clinicsList)) {
+                    clinicsList = clinicsList.map(c => (String(c.id) === String(currentClinicId) ? { ...c, ...clinicSettings } : c));
+                }
+            } catch (_e) {}
             updateClinicSettingsDisplay();
             updateCurrentClinicDisplay();
+            try { populateClinicSelectors(); } catch (_e2) {}
             try { loadTodayAppointments(); } catch (_e) {}
         }
         function updateCurrentClinicDisplay() {
