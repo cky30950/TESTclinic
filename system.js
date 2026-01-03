@@ -1773,6 +1773,53 @@ async function fetchUsers(forceRefresh = false) {
                     addBtn.dataset.bound = 'true';
                 }
             } catch (_e3) {}
+            try {
+                const delBtn = document.getElementById('deleteClinicButton');
+                if (delBtn && !delBtn.dataset.bound) {
+                    delBtn.addEventListener('click', async function() {
+                        if (!currentClinicId || currentClinicId === 'local-default') {
+                            showToast('未選擇診所或此診所不可刪除', 'error');
+                            return;
+                        }
+                        if (!Array.isArray(clinicsList) || clinicsList.length <= 1) {
+                            showToast('至少保留一間診所，無法刪除', 'error');
+                            return;
+                        }
+                        const ok = window.confirm('確定要刪除目前選擇的診所嗎？刪除後不可恢復。');
+                        if (!ok) return;
+                        try {
+                            const res = await window.firebaseDataManager.deleteClinic(currentClinicId);
+                            if (res && res.success) {
+                                const listRes = await window.firebaseDataManager.getClinics();
+                                clinicsList = listRes && listRes.success && Array.isArray(listRes.data) ? listRes.data : [];
+                                const nextId = clinicsList.length ? clinicsList[0].id : null;
+                                if (nextId) {
+                                    await setCurrentClinicId(nextId);
+                                } else {
+                                    currentClinicId = 'local-default';
+                                    clinicSettings = {
+                                        chineseName: '名醫診所系統',
+                                        englishName: 'Dr.Great Clinic',
+                                        businessHours: '週一至週五 09:00-18:00',
+                                        phone: '(852) 2345-6789',
+                                        address: '香港中環皇后大道中123號'
+                                    };
+                                    populateClinicSelectors();
+                                    updateClinicSettingsDisplay();
+                                    updateCurrentClinicDisplay();
+                                }
+                                showToast('診所已刪除', 'success');
+                            } else {
+                                showToast('刪除診所失敗', 'error');
+                            }
+                        } catch (err) {
+                            console.error('刪除診所錯誤:', err);
+                            showToast('刪除診所失敗', 'error');
+                        }
+                    });
+                    delBtn.dataset.bound = 'true';
+                }
+            } catch (_e4) {}
         }
         async function setCurrentClinicId(id) {
             currentClinicId = id;
@@ -20695,6 +20742,17 @@ class FirebaseDataManager {
                     ...dataToWrite,
                     updatedAt: new Date()
                 }
+            );
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err && err.message ? err.message : String(err) };
+        }
+    }
+    async deleteClinic(id) {
+        if (!this.isReady) return { success: false };
+        try {
+            await window.firebase.deleteDoc(
+                window.firebase.doc(window.firebase.db, 'clinics', id)
             );
             return { success: true };
         } catch (err) {
