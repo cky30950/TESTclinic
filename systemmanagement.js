@@ -39,7 +39,15 @@ async function saveClinicSettings() {
     try {
         if (typeof currentClinicId !== 'undefined' && currentClinicId) {
             await window.firebaseDataManager.updateClinic(currentClinicId, clinicSettings);
+            try {
+                const listRes = await window.firebaseDataManager.getClinics();
+                if (listRes && listRes.success && Array.isArray(listRes.data)) {
+                    clinicsList = listRes.data;
+                }
+            } catch (_eList) {}
             updateClinicSettingsDisplay();
+            try { populateClinicSelectors(); } catch (_ePop) {}
+            try { updateCurrentClinicDisplay(); } catch (_eDisp) {}
             hideClinicSettingsModal();
             showToast('診所資料已成功更新！', 'success');
         } else {
