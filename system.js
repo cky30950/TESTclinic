@@ -9451,6 +9451,7 @@ if (!patient) {
             const nextLabel = dict['較新'] || '較新';
             const doctorLabel = dict['醫師：'] || '醫師：';
             const recordNumberLabel = dict['病歷編號：'] || '病歷編號：';
+            const clinicLabel = dict['診所：'] || '診所：';
 
             contentDiv.innerHTML = `
                 <!-- 分頁導航 -->
@@ -9486,32 +9487,50 @@ if (!patient) {
                 <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                     <div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
                         <div class="flex justify-between items-center">
-                            <div class="flex items-center space-x-4">
+                            <div class="flex flex-col space-y-1">
                                 <span class="font-semibold text-gray-900 text-lg">
                                     ${(() => {
-                                        // 使用通用日期解析函式處理各種日期格式
                                         const parsedDate = parseConsultationDate(consultation.date);
                                         if (!parsedDate || isNaN(parsedDate.getTime())) {
                                             return '日期未知';
                                         }
-                                        // 根據語言設定輸出日期格式。英語使用 en-US，中文使用 zh-TW。
                                         const locale = lang === 'en' ? 'en-US' : 'zh-TW';
                                         const datePart = parsedDate.toLocaleDateString(locale);
                                         const timePart = parsedDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
                                         return datePart + ' ' + timePart;
                                     })()}
                                 </span>
+                        ${(() => {
+                            let clinicName = '';
+                            try {
+                                if (consultation.clinicName) clinicName = consultation.clinicName;
+                                else if (consultation.clinicId) {
+                                    const foundClinic = Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(consultation.clinicId)) : null;
+                                    clinicName = foundClinic ? (foundClinic.chineseName || foundClinic.englishName || '') : '';
+                                } else {
+                                    clinicName = '';
+                                }
+                            } catch (_e) {
+                                clinicName = '';
+                            }
+                            return `
+                            <div class="flex items-center space-x-2">
                                 <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
                                     ${doctorLabel}${getDoctorDisplayName(consultation.doctor)}
-                                </span>
-                                <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
-                                    ${recordNumberLabel}${consultation.medicalRecordNumber || consultation.id}
-                                </span>
-                                ${consultation.updatedAt ? `
-                                    <span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                                        已修改
-                                    </span>
-                                ` : ''}
+                                        </span>
+                                        <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
+                                            ${recordNumberLabel}${consultation.medicalRecordNumber || consultation.id}
+                                        </span>
+                                        <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
+                                            ${clinicLabel}${window.escapeHtml(clinicName || '未設定')}
+                                        </span>
+                                        ${consultation.updatedAt ? `
+                                            <span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                                已修改
+                                            </span>
+                                        ` : ''}
+                                    </div>`;
+                                })()}
                             </div>
                             <div class="flex flex-wrap justify-end gap-1">
                                 <button onclick="printConsultationRecord('${consultation.id}')" 
@@ -9886,6 +9905,7 @@ function displayConsultationMedicalHistoryPage() {
     const nextLabel = dict['較新'] || '較新';
     const doctorLabel = dict['醫師：'] || '醫師：';
     const recordNumberLabel = dict['病歷編號：'] || '病歷編號：';
+    const clinicLabel = dict['診所：'] || '診所：';
 
     // Compose the HTML content with translated dynamic labels.  Chinese
     // strings remain in the markup for static phrases that the i18n
@@ -9925,22 +9945,41 @@ function displayConsultationMedicalHistoryPage() {
         <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
             <div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
                 <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-4">
+                    <div class="flex flex-col space-y-1">
                         <span class="font-semibold text-gray-900 text-lg">
                             ${formatConsultationDateTime(consultation.date)}
                         </span>
-                        <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
-                            ${doctorLabel}${getDoctorDisplayName(consultation.doctor)}
-                        </span>
-                        <!-- 新增病歷編號顯示 -->
-                        <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
-                            ${recordNumberLabel}${consultation.medicalRecordNumber || consultation.id}
-                        </span>
-                        ${consultation.updatedAt ? `
-                            <span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                                已修改
-                            </span>
-                        ` : ''}
+                        ${(() => {
+                            let clinicName = '';
+                            try {
+                                if (consultation.clinicName) clinicName = consultation.clinicName;
+                                else if (consultation.clinicId) {
+                                    const foundClinic = Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(consultation.clinicId)) : null;
+                                    clinicName = foundClinic ? (foundClinic.chineseName || foundClinic.englishName || '') : '';
+                                } else {
+                                    clinicName = '';
+                                }
+                            } catch (_e) {
+                                clinicName = '';
+                            }
+                            return `
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
+                                    ${doctorLabel}${getDoctorDisplayName(consultation.doctor)}
+                                </span>
+                                <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
+                                    ${recordNumberLabel}${consultation.medicalRecordNumber || consultation.id}
+                                </span>
+                                <span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">
+                                    ${clinicLabel}${window.escapeHtml(clinicName || '未設定')}
+                                </span>
+                                ${consultation.updatedAt ? `
+                                    <span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                        已修改
+                                    </span>
+                                ` : ''}
+                            </div>`;
+                        })()}
                     </div>
                     <div class="flex flex-wrap justify-end gap-1">
                         <button onclick="printConsultationRecord('${consultation.id}')" 
@@ -23649,29 +23688,29 @@ function viewMedicalRecord(recordId, patientId) {
         // 左側日期與表列（分兩行）
         detailHtml += '<div class="flex flex-col space-y-1">';
         detailHtml += `<span class="font-semibold text-gray-900 text-lg">${window.escapeHtml(dateTimeStr)}</span>`;
-        // 第二行表列包含醫師、病歷編號與診所
-        (function () {
-            // 取得診所顯示名稱
-            let clinicName = '';
-            try {
-                if (rec.clinicName) {
-                    clinicName = rec.clinicName;
-                } else if (rec.clinicId) {
-                    const foundClinic = Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(rec.clinicId)) : null;
-                    clinicName = foundClinic ? (foundClinic.chineseName || foundClinic.englishName || '') : (clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '');
-                } else {
-                    clinicName = clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '';
+            // 第二行表列包含醫師、病歷編號與診所
+            (function () {
+                // 取得診所顯示名稱
+                let clinicName = '';
+                try {
+                    if (rec.clinicName) {
+                        clinicName = rec.clinicName;
+                    } else if (rec.clinicId) {
+                        const foundClinic = Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(rec.clinicId)) : null;
+                        clinicName = foundClinic ? (foundClinic.chineseName || foundClinic.englishName || '') : '';
+                    } else {
+                        clinicName = '';
+                    }
+                } catch (_e) {
+                    clinicName = '';
                 }
-            } catch (_e) {
-                clinicName = clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '';
-            }
-            const row = [
-                `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(doctorLabel)}${window.escapeHtml(doctorName)}</span>`,
-                `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(recordNumberLabel)}${window.escapeHtml(rec.medicalRecordNumber || rec.id)}</span>`,
-                `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(clinicLabel)}${window.escapeHtml(clinicName || '未設定')}</span>`
-            ].join('');
-            detailHtml += `<div class="flex items-center space-x-2">${row}</div>`;
-        })();
+                const row = [
+                    `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(doctorLabel)}${window.escapeHtml(doctorName)}</span>`,
+                    `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(recordNumberLabel)}${window.escapeHtml(rec.medicalRecordNumber || rec.id)}</span>`,
+                    `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(clinicLabel)}${window.escapeHtml(clinicName || '未設定')}</span>`
+                ].join('');
+                detailHtml += `<div class="flex items-center space-x-2">${row}</div>`;
+            })();
         if (rec.updatedAt) {
             detailHtml += '<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">已修改</span>';
         }
