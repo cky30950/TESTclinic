@@ -9152,6 +9152,11 @@ async function saveConsultation() {
             }
             consultationData.date = existing && existing.date ? existing.date : new Date();
             consultationData.doctor = existing && existing.doctor ? existing.doctor : currentUser;
+            // 若既有病歷未包含診所，則補上目前診所
+            try {
+                consultationData.clinicId = (existing && existing.clinicId) ? existing.clinicId : (currentClinicId || null);
+                consultationData.clinicName = (existing && existing.clinicName) ? existing.clinicName : (clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '');
+            } catch (_eClinicEdit) {}
             // Update the existing consultation record
             const updateResult = await window.firebaseDataManager.updateConsultation(String(appointment.consultationId), consultationData);
             if (updateResult && updateResult.success) {
@@ -9195,6 +9200,11 @@ async function saveConsultation() {
             consultationData.medicalRecordNumber = generateMedicalRecordNumber();
             consultationData.date = new Date();
             consultationData.doctor = currentUser;
+            // 記錄診所資訊
+            try {
+                consultationData.clinicId = currentClinicId || null;
+                consultationData.clinicName = clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '';
+            } catch (_eClinic) {}
             const result = await window.firebaseDataManager.addConsultation(consultationData);
             if (result && result.success) {
                 operationSuccess = true;
@@ -23619,6 +23629,7 @@ function viewMedicalRecord(recordId, patientId) {
         // 準備醫師與病歷編號標籤（含冒號），如果翻譯存在則使用翻譯
         const doctorLabel = dict['醫師：'] || '醫師：';
         const recordNumberLabel = dict['病歷編號：'] || '病歷編號：';
+        const clinicLabel = dict['診所：'] || '診所：';
         // 構建可選擇載入病歷按鈕的 HTML
         let loadButtonHtml = '';
         try {
@@ -23635,15 +23646,36 @@ function viewMedicalRecord(recordId, patientId) {
         // Header 區塊
         detailHtml += '<div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">';
         detailHtml += '<div class="flex justify-between items-center">';
-        // 左側日期與標籤
-        detailHtml += '<div class="flex items-center space-x-4">';
+        // 左側日期與表列（分兩行）
+        detailHtml += '<div class="flex flex-col space-y-1">';
         detailHtml += `<span class="font-semibold text-gray-900 text-lg">${window.escapeHtml(dateTimeStr)}</span>`;
-        detailHtml += `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(doctorLabel)}${window.escapeHtml(doctorName)}</span>`;
-        detailHtml += `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(recordNumberLabel)}${window.escapeHtml(rec.medicalRecordNumber || rec.id)}</span>`;
+        // 第二行表列包含醫師、病歷編號與診所
+        (function () {
+            // 取得診所顯示名稱
+            let clinicName = '';
+            try {
+                if (rec.clinicName) {
+                    clinicName = rec.clinicName;
+                } else if (rec.clinicId) {
+                    const foundClinic = Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(rec.clinicId)) : null;
+                    clinicName = foundClinic ? (foundClinic.chineseName || foundClinic.englishName || '') : (clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '');
+                } else {
+                    clinicName = clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '';
+                }
+            } catch (_e) {
+                clinicName = clinicSettings && clinicSettings.chineseName ? clinicSettings.chineseName : '';
+            }
+            const row = [
+                `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(doctorLabel)}${window.escapeHtml(doctorName)}</span>`,
+                `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(recordNumberLabel)}${window.escapeHtml(rec.medicalRecordNumber || rec.id)}</span>`,
+                `<span class="text-sm text-gray-600 bg-white px-3 py-1 rounded">${window.escapeHtml(clinicLabel)}${window.escapeHtml(clinicName || '未設定')}</span>`
+            ].join('');
+            detailHtml += `<div class="flex items-center space-x-2">${row}</div>`;
+        })();
         if (rec.updatedAt) {
             detailHtml += '<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">已修改</span>';
         }
-        detailHtml += '</div>'; // 關閉左側信息
+        detailHtml += '</div>'; // 關閉左側信息（兩行）
         // 右側按鈕
         detailHtml += '<div class="flex flex-wrap justify-end gap-1">';
         detailHtml += `<button onclick="printConsultationRecord('${rec.id}')" class="text-green-600 hover:text-green-800 text-sm font-medium bg-green-50 px-3 py-2 rounded" style="transform: scale(0.75); transform-origin: left;">列印收據</button>`;
