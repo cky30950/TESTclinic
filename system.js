@@ -1858,6 +1858,8 @@ async function fetchUsers(forceRefresh = false) {
             try { localStorage.setItem('clinics', JSON.stringify(clinicsList)); } catch (_e3) {}
             try { loadTodayAppointments(); } catch (_e) {}
             try { if (typeof window.scheduleReloadForClinic === 'function') window.scheduleReloadForClinic(); } catch (_e4) {}
+            try { await initBillingItems(true); } catch (_e5) {}
+            try { if (typeof displayBillingItems === 'function') displayBillingItems(); } catch (_e6) {}
         }
         function updateCurrentClinicDisplay() {
             const el = document.getElementById('currentClinicDisplay');
@@ -4077,6 +4079,14 @@ async function recordInventoryHistory(type, entries, extra = {}) {
          * 從 Firestore 讀取收費項目資料，若資料不存在則使用預設資料初始化。
          * 此函式會等待 Firebase 初始化完成後再執行。
          */
+        function getClinicScopedStorageKey(base) {
+            try {
+                const cid = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+                return `${base}_${cid}`;
+            } catch (_e) {
+                return `${base}_local-default`;
+            }
+        }
         async function initBillingItems(forceRefresh = false) {
             // 若已載入且不需要強制重新載入，直接返回以避免重複讀取
             if (billingItemsLoaded && !forceRefresh) {
@@ -4085,7 +4095,7 @@ async function recordInventoryHistory(type, entries, extra = {}) {
             // 優先嘗試從 localStorage 載入收費項目
             if (!forceRefresh) {
                 try {
-                    const stored = localStorage.getItem('billingItems');
+                    const stored = localStorage.getItem(getClinicScopedStorageKey('billingItems'));
                     if (stored) {
                         const localData = JSON.parse(stored);
                         if (Array.isArray(localData)) {
@@ -4102,8 +4112,9 @@ async function recordInventoryHistory(type, entries, extra = {}) {
             await waitForFirebaseDb();
             try {
                 // 從 Firestore 取得 billingItems 集合資料
+                const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
                 const querySnapshot = await window.firebase.getDocs(
-                    window.firebase.collection(window.firebase.db, 'billingItems')
+                    window.firebase.collection(window.firebase.db, 'clinics', clinicId, 'billingItems')
                 );
                 const itemsFromFirestore = [];
                 querySnapshot.forEach((docSnap) => {
@@ -4119,7 +4130,7 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                 billingItemsLoaded = true;
                 // 將資料寫入 localStorage
                 try {
-                    localStorage.setItem('billingItems', JSON.stringify(billingItems));
+                    localStorage.setItem(getClinicScopedStorageKey('billingItems'), JSON.stringify(billingItems));
                 } catch (lsErr) {
                     console.warn('保存收費項目到本地失敗:', lsErr);
                 }
@@ -14827,7 +14838,7 @@ async function initializeSystemAfterLogin() {
 
                 // 將最新收費項目存回本地以支援跨裝置同步讀取。
                 try {
-                    localStorage.setItem('billingItems', JSON.stringify(billingItems));
+                    localStorage.setItem(getClinicScopedStorageKey('billingItems'), JSON.stringify(billingItems));
                 } catch (lsErrUpdate) {
                     console.warn('保存收費項目到本地失敗:', lsErrUpdate);
                 }
@@ -14842,8 +14853,9 @@ async function initializeSystemAfterLogin() {
                     } catch (_omitErr) {
                         dataToWrite = item;
                     }
+                    const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
                     await window.firebase.setDoc(
-                        window.firebase.doc(window.firebase.db, 'billingItems', String(item.id)),
+                        window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(item.id)),
                         dataToWrite
                     );
                 } catch (error) {
@@ -14879,15 +14891,16 @@ async function initializeSystemAfterLogin() {
                 if (confirmDel) {
                     billingItems = billingItems.filter(b => String(b.id) !== idStr);
                     try {
+                        const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
                         await window.firebase.deleteDoc(
-                            window.firebase.doc(window.firebase.db, 'billingItems', String(id))
+                            window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(id))
                         );
                     } catch (error) {
                         console.error('刪除收費項目資料至 Firestore 失敗:', error);
                     }
                     // 刪除後更新本地存儲，以便其他裝置下次載入時取得最新資料
                     try {
-                        localStorage.setItem('billingItems', JSON.stringify(billingItems));
+                        localStorage.setItem(getClinicScopedStorageKey('billingItems'), JSON.stringify(billingItems));
                     } catch (lsErrDel) {
                         console.warn('刪除收費項目後保存本地資料失敗:', lsErrDel);
                     }
