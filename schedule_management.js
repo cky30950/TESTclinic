@@ -366,6 +366,30 @@
                 return 'local-default';
             }
         }
+        function getCurrentClinicName() {
+            let name = '';
+            try {
+                const cid = getCurrentClinicId();
+                const stored = localStorage.getItem('clinics');
+                if (stored) {
+                    const list = JSON.parse(stored);
+                    if (Array.isArray(list)) {
+                        const found = list.find(c => String(c.id) === String(cid));
+                        if (found) {
+                            name = found.chineseName || found.englishName || '';
+                        }
+                    }
+                }
+                if (!name) {
+                    const cs = localStorage.getItem('clinicSettings');
+                    if (cs) {
+                        const obj = JSON.parse(cs);
+                        name = obj.chineseName || obj.englishName || '';
+                    }
+                }
+            } catch (_e) {}
+            return name || '';
+        }
         async function saveShiftToDb(shift) {
             try {
                 if (!window.firebase || !window.firebase.rtdb || !shift) return;
@@ -2016,9 +2040,11 @@
                 if (lang === 'en') {
                     // Use zero‑padded month for consistency
                     const mm = String(month + 1).padStart(2, '0');
-                    title = translate('排班表') + ' - ' + year + '/' + mm;
+                    const clinicName = getCurrentClinicName();
+                    title = translate('排班表') + ' - ' + year + '/' + mm + (clinicName ? ' - ' + translate('診所') + ': ' + clinicName : '');
                 } else {
-                    title = year + ' 年 ' + (month + 1) + ' 月' + translate('排班表');
+                    const clinicName = getCurrentClinicName();
+                    title = year + ' 年 ' + (month + 1) + ' 月' + translate('排班表') + (clinicName ? '（' + translate('診所') + '：' + clinicName + '）' : '');
                 }
                 html += '<h2>' + title + '</h2>';
                 // Table header: translate the headings

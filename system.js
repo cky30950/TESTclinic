@@ -4113,20 +4113,24 @@ async function recordInventoryHistory(type, entries, extra = {}) {
             try {
                 // 從 Firestore 取得 billingItems 集合資料
                 const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
-                const querySnapshot = await window.firebase.getDocs(
+                const clinicSnap = await window.firebase.getDocs(
                     window.firebase.collection(window.firebase.db, 'clinics', clinicId, 'billingItems')
                 );
-                const itemsFromFirestore = [];
-                querySnapshot.forEach((docSnap) => {
-                    // 將文件 ID 作為 id 欄位，避免依賴資料內的 id
-                    itemsFromFirestore.push({ id: docSnap.id, ...docSnap.data() });
+                const globalSnap = await window.firebase.getDocs(
+                    window.firebase.collection(window.firebase.db, 'globalBillingItems')
+                );
+                const byId = new Map();
+                // 先加入全域共用項目
+                globalSnap.forEach(docSnap => {
+                    const data = { id: docSnap.id, ...docSnap.data(), shared: true };
+                    byId.set(String(data.id), data);
                 });
-                if (itemsFromFirestore.length === 0) {
-                    // Firestore 中沒有資料時，不自動載入預設資料，保持空陣列
-                    billingItems = [];
-                } else {
-                    billingItems = itemsFromFirestore;
-                }
+                // 再加入診所專屬項目（覆蓋相同 id）
+                clinicSnap.forEach(docSnap => {
+                    const data = { id: docSnap.id, ...docSnap.data(), shared: !!docSnap.data().shared };
+                    byId.set(String(data.id), data);
+                });
+                billingItems = Array.from(byId.values());
                 billingItemsLoaded = true;
                 // 將資料寫入 localStorage
                 try {
@@ -14707,6 +14711,7 @@ async function initializeSystemAfterLogin() {
             document.getElementById('billingItemUnit').value = '';
             document.getElementById('billingItemDescription').value = '';
             document.getElementById('billingItemActive').checked = true;
+            const sh = document.getElementById('billingItemShared'); if (sh) sh.checked = false;
         }
         
         function editBillingItem(id) {
@@ -14731,6 +14736,7 @@ async function initializeSystemAfterLogin() {
             document.getElementById('billingItemUnit').value = item.unit || '';
             document.getElementById('billingItemDescription').value = item.description || '';
             document.getElementById('billingItemActive').checked = item.active !== false;
+            const sh = document.getElementById('billingItemShared'); if (sh) sh.checked = !!item.shared;
             document.getElementById('billingItemPackageUses').value = item.packageUses || '';
             document.getElementById('billingItemValidityDays').value = item.validityDays || '';
             {
@@ -14809,6 +14815,8 @@ async function initializeSystemAfterLogin() {
             try {
                 // 始終使用字串作為 ID，以避免字串與數字比較造成的匹配問題
                 const newId = editingBillingItemId || String(Date.now());
+                const prevItem = editingBillingItemId ? billingItems.find(b => String(b.id) === String(editingBillingItemId)) : null;
+                const wasShared = prevItem ? !!prevItem.shared : false;
                 const item = {
                     id: newId,
                     name: name,
@@ -14819,6 +14827,7 @@ async function initializeSystemAfterLogin() {
                     packageUses: packageUses,
                     validityDays: validityDays,
                     active: document.getElementById('billingItemActive').checked,
+                    shared: !!(document.getElementById('billingItemShared') && document.getElementById('billingItemShared').checked),
                     createdAt: editingBillingItemId ? (billingItems.find(b => String(b.id) === String(editingBillingItemId)) || {}).createdAt : new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
@@ -14854,10 +14863,33 @@ async function initializeSystemAfterLogin() {
                         dataToWrite = item;
                     }
                     const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
-                    await window.firebase.setDoc(
-                        window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(item.id)),
-                        dataToWrite
-                    );
+                    if (item.shared) {
+                        await window.firebase.setDoc(
+                            window.firebase.doc(window.firebase.db, 'globalBillingItems', String(item.id)),
+                            dataToWrite
+                        );
+                        // 若由診所專屬改為共用，刪除診所節點的舊資料以避免重複
+                        if (editingBillingItemId && !wasShared) {
+                            try {
+                                await window.firebase.deleteDoc(
+                                    window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(item.id))
+                                );
+                            } catch (_delClinic) {}
+                        }
+                    } else {
+                        await window.firebase.setDoc(
+                            window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(item.id)),
+                            dataToWrite
+                        );
+                        // 若由共用改為診所專屬，刪除全域節點舊資料
+                        if (editingBillingItemId && wasShared) {
+                            try {
+                                await window.firebase.deleteDoc(
+                                    window.firebase.doc(window.firebase.db, 'globalBillingItems', String(item.id))
+                                );
+                            } catch (_delGlobal) {}
+                        }
+                    }
                 } catch (error) {
                     console.error('儲存收費項目至 Firestore 失敗:', error);
                 }
@@ -14892,9 +14924,15 @@ async function initializeSystemAfterLogin() {
                     billingItems = billingItems.filter(b => String(b.id) !== idStr);
                     try {
                         const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
-                        await window.firebase.deleteDoc(
-                            window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(id))
-                        );
+                        if (item.shared) {
+                            await window.firebase.deleteDoc(
+                                window.firebase.doc(window.firebase.db, 'globalBillingItems', String(id))
+                            );
+                        } else {
+                            await window.firebase.deleteDoc(
+                                window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', String(id))
+                            );
+                        }
                     } catch (error) {
                         console.error('刪除收費項目資料至 Firestore 失敗:', error);
                     }
@@ -18031,8 +18069,10 @@ async function deleteUser(id) {
             }
             // 載入醫師選項
             loadFinancialDoctorOptions();
+            try { if (!Array.isArray(clinicsList) || clinicsList.length === 0) await initClinics(); } catch (_e) {}
+            loadFinancialClinicOptions();
             // 生成初始報表
-            generateFinancialReport();
+            await generateFinancialReport();
         }
 
         // 格式化日期為 YYYY-MM-DD
@@ -18061,6 +18101,21 @@ async function deleteUser(id) {
                 option.textContent = `${doctor.name}`;
                 doctorSelect.appendChild(option);
             });
+        }
+        function loadFinancialClinicOptions() {
+            const sel = document.getElementById('clinicFilterFinancial');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">全部診所</option>';
+            const list = Array.isArray(clinicsList) ? clinicsList : [];
+            list.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.chineseName || c.englishName || c.id;
+                sel.appendChild(opt);
+            });
+            try {
+                if (currentClinicId) sel.value = currentClinicId;
+            } catch (_e) {}
         }
 
         // 從 Firebase 載入用戶資料以供財務報表使用
@@ -18133,38 +18188,38 @@ async function deleteUser(id) {
                     }
                 }
                 let res = await window.firebaseDataManager.getConsultations(true);
-                if (res && res.success) {
-                    let all = res.data;
-                    while (res.hasMore) {
-                        res = await window.firebaseDataManager.getConsultationsNextPage();
-                        if (res && res.success && Array.isArray(res.data)) {
-                            all = res.data;
-                        } else {
-                            break;
+                        if (res && res.success) {
+                            let all = res.data;
+                            while (res.hasMore) {
+                                res = await window.firebaseDataManager.getConsultationsNextPage();
+                                if (res && res.success && Array.isArray(res.data)) {
+                                    all = res.data;
+                                } else {
+                                    break;
+                                }
+                            }
+                            consultations = all.map(item => {
+                                let dateStr = null;
+                                if (item.date) {
+                                    if (typeof item.date === 'object' && item.date.seconds) {
+                                        dateStr = new Date(item.date.seconds * 1000).toISOString();
+                                    } else {
+                                        dateStr = item.date;
+                                    }
+                                } else if (item.createdAt) {
+                                    if (typeof item.createdAt === 'object' && item.createdAt.seconds) {
+                                        dateStr = new Date(item.createdAt.seconds * 1000).toISOString();
+                                    } else {
+                                        dateStr = item.createdAt;
+                                    }
+                                }
+                                return { ...item, date: dateStr, clinicId: item.clinicId || null, clinicName: item.clinicName || '' };
+                            });
                         }
+                    } catch (error) {
+                        console.error('載入 Firebase 診症資料失敗:', error);
                     }
-                    consultations = all.map(item => {
-                        let dateStr = null;
-                        if (item.date) {
-                            if (typeof item.date === 'object' && item.date.seconds) {
-                                dateStr = new Date(item.date.seconds * 1000).toISOString();
-                            } else {
-                                dateStr = item.date;
-                            }
-                        } else if (item.createdAt) {
-                            if (typeof item.createdAt === 'object' && item.createdAt.seconds) {
-                                dateStr = new Date(item.createdAt.seconds * 1000).toISOString();
-                            } else {
-                                dateStr = item.createdAt;
-                            }
-                        }
-                        return { ...item, date: dateStr };
-                    });
                 }
-            } catch (error) {
-                console.error('載入 Firebase 診症資料失敗:', error);
-            }
-        }
 
         // 快速日期選擇
         function setQuickDate() {
@@ -18330,6 +18385,8 @@ async function deleteUser(id) {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             const doctorFilter = document.getElementById('doctorFilter').value;
+            const clinicFilterEl = document.getElementById('clinicFilterFinancial');
+            const clinicFilter = clinicFilterEl ? clinicFilterEl.value : '';
             let reportType = '';
             const rptElem = document.getElementById('reportType');
             if (rptElem) {
@@ -18341,7 +18398,7 @@ async function deleteUser(id) {
                 return;
             }
 
-            const cacheKey = `${startDate}|${endDate}|${doctorFilter||''}`;
+            const cacheKey = `${startDate}|${endDate}|${doctorFilter||''}|${clinicFilter||''}`;
             const existing = financialReportCache[cacheKey] || readCache('financialReportCache', cacheKey);
             if (existing) {
                 try {
@@ -18372,7 +18429,7 @@ async function deleteUser(id) {
                                         dateStr = item.createdAt;
                                     }
                                 }
-                                return { id: item.id, date: dateStr, doctor: item.doctor, status: item.status, billingItems: item.billingItems, createdAt: item.createdAt, updatedAt: item.updatedAt };
+                                return { id: item.id, date: dateStr, doctor: item.doctor, status: item.status, billingItems: item.billingItems, clinicId: item.clinicId || null, clinicName: item.clinicName || '', createdAt: item.createdAt, updatedAt: item.updatedAt };
                             };
                             const deltas = deltaRes.data.map(normalize);
                             const start = new Date(startDate);
@@ -18381,8 +18438,9 @@ async function deleteUser(id) {
                                 const d = new Date(c.date);
                                 const dateInRange = d >= start && d <= end;
                                 const doctorMatch = !doctorFilter || c.doctor === doctorFilter;
+                                const clinicMatch = !clinicFilter || (c.clinicId && String(c.clinicId) === String(clinicFilter));
                                 const isCompleted = c.status === 'completed';
-                                return dateInRange && doctorMatch && isCompleted;
+                                return dateInRange && doctorMatch && clinicMatch && isCompleted;
                             };
                             const index = new Map(existing.filteredConsultations.map(c => [String(c.id), c]));
                             for (const r of deltas) {
@@ -18430,7 +18488,7 @@ async function deleteUser(id) {
             }
 
             // 過濾診症資料
-            const filteredConsultations = filterFinancialConsultations(startDate, endDate, doctorFilter);
+            const filteredConsultations = filterFinancialConsultations(startDate, endDate, doctorFilter, clinicFilter);
             
             // 計算統計資料
             const stats = calculateFinancialStatistics(filteredConsultations);
@@ -18460,7 +18518,7 @@ async function deleteUser(id) {
         }
 
         // 過濾診症資料
-        function filterFinancialConsultations(startDate, endDate, doctorFilter) {
+        function filterFinancialConsultations(startDate, endDate, doctorFilter, clinicFilter) {
             const start = new Date(startDate);
             const end = new Date(endDate + 'T23:59:59.999Z');
 
@@ -18468,9 +18526,10 @@ async function deleteUser(id) {
                 const consultationDate = new Date(consultation.date);
                 const dateInRange = consultationDate >= start && consultationDate <= end;
                 const doctorMatch = !doctorFilter || consultation.doctor === doctorFilter;
+                const clinicMatch = !clinicFilter || (consultation.clinicId && String(consultation.clinicId) === String(clinicFilter));
                 const isCompleted = consultation.status === 'completed';
 
-                return dateInRange && doctorMatch && isCompleted;
+                return dateInRange && doctorMatch && clinicMatch && isCompleted;
             });
         }
 
@@ -18768,8 +18827,13 @@ async function exportFinancialReport() {
     if (doctorFilterInput) {
         doctorFilter = doctorFilterInput.value;
     }
+    let clinicFilter = '';
+    const clinicFilterInput = document.getElementById('clinicFilterFinancial');
+    if (clinicFilterInput) {
+        clinicFilter = clinicFilterInput.value;
+    }
     // 過濾診症資料並計算統計以生成更詳細的報表
-    const filteredConsultations = filterFinancialConsultations(startDate, endDate, doctorFilter);
+    const filteredConsultations = filterFinancialConsultations(startDate, endDate, doctorFilter, clinicFilter);
     const stats = calculateFinancialStatistics(filteredConsultations);
     const months = monthsInDateRange(startDate, endDate);
     let totalCost = 0;
@@ -18799,6 +18863,11 @@ async function exportFinancialReport() {
     let textReport = '';
     if (doctorFilter) {
         textReport += `選擇醫師: ${doctorFilter}\n`;
+    }
+    if (clinicFilter) {
+        const clinicOpt = (Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(clinicFilter)) : null);
+        const clinicName = clinicOpt ? (clinicOpt.chineseName || clinicOpt.englishName || clinicOpt.id) : clinicFilter;
+        textReport += `選擇診所: ${clinicName}\n`;
     }
     textReport += `報表標題: 財務報表 - ${reportType}\n`;
     textReport += `期間: ${startDate} 至 ${endDate}\n`;
