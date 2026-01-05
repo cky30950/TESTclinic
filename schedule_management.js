@@ -358,13 +358,22 @@
          * 僅寫入該排班，而不覆蓋整個排班集合。
          * @param {Object} shift 排班物件，必須包含 id、date 等欄位
          */
+        function getCurrentClinicId() {
+            try {
+                const cid = localStorage.getItem('currentClinicId');
+                return cid || 'local-default';
+            } catch (_e) {
+                return 'local-default';
+            }
+        }
         async function saveShiftToDb(shift) {
             try {
                 if (!window.firebase || !window.firebase.rtdb || !shift) return;
                 const monthKey = getMonthKey(shift.date);
                 // 從 shift 物件中移除 id 以避免 id 存入資料庫值
                 const { id, ...data } = shift || {};
-                const path = `scheduleShifts/${monthKey}/${id}`;
+                const clinicId = shift && shift.clinicId ? String(shift.clinicId) : getCurrentClinicId();
+                const path = `clinics/${clinicId}/scheduleShifts/${monthKey}/${id}`;
                 const refPath = window.firebase.ref(window.firebase.rtdb, path);
                 await window.firebase.set(refPath, data);
             } catch (e) {
@@ -380,7 +389,8 @@
             try {
                 if (!window.firebase || !window.firebase.rtdb || !shift) return;
                 const monthKey = getMonthKey(shift.date);
-                const path = `scheduleShifts/${monthKey}/${shift.id}`;
+                const clinicId = shift && shift.clinicId ? String(shift.clinicId) : getCurrentClinicId();
+                const path = `clinics/${clinicId}/scheduleShifts/${monthKey}/${shift.id}`;
                 const refPath = window.firebase.ref(window.firebase.rtdb, path);
                 await window.firebase.remove(refPath);
             } catch (e) {
@@ -414,7 +424,8 @@
                 }
                 // 只載入目前月份的排班資料，以減少下載量
                 const monthKey = getMonthKey();
-                const monthRef = window.firebase.ref(window.firebase.rtdb, `scheduleShifts/${monthKey}`);
+                const clinicId = getCurrentClinicId();
+                const monthRef = window.firebase.ref(window.firebase.rtdb, `clinics/${clinicId}/scheduleShifts/${monthKey}`);
                 const snapshot = await window.firebase.get(monthRef);
                 const data = snapshot && snapshot.exists() ? snapshot.val() : null;
                 // 清空現有資料，保持陣列引用不變
@@ -912,7 +923,8 @@
                 type: shiftType,
                 status: 'confirmed',
                 // 拖拽新增排班不再自動加入備註文字
-                notes: ''
+                notes: '',
+                clinicId: getCurrentClinicId()
             };
             
             shifts.push(newShift);
@@ -1215,7 +1227,8 @@
                 endTime: endTime,
                 type: type,
                 status: 'confirmed',
-                notes: document.getElementById('shiftNotes') ? document.getElementById('shiftNotes').value : ''
+                notes: document.getElementById('shiftNotes') ? document.getElementById('shiftNotes').value : '',
+                clinicId: getCurrentClinicId()
             };
             
             if (editId) {
@@ -2120,6 +2133,18 @@
   window.scheduleShowShiftDetails = showShiftDetails;
   window.scheduleShowShiftDetailsById = showShiftDetailsById;
   window.scheduleUpdateStats = updateStats;
+  if (typeof window.scheduleReloadForClinic !== 'function') {
+    window.scheduleReloadForClinic = async function () {
+      try {
+        await loadShiftsFromDb();
+        renderCalendar();
+        renderStaffPanel();
+        updateStats();
+      } catch (e) {
+        console.warn('scheduleReloadForClinic error', e);
+      }
+    };
+  }
 
   // 列印當月排班表函式
   window.schedulePrintShiftTable = printCurrentMonthSchedule;

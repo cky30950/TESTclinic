@@ -1857,6 +1857,7 @@ async function fetchUsers(forceRefresh = false) {
             try { populateClinicSelectors(); } catch (_e2) {}
             try { localStorage.setItem('clinics', JSON.stringify(clinicsList)); } catch (_e3) {}
             try { loadTodayAppointments(); } catch (_e) {}
+            try { if (typeof window.scheduleReloadForClinic === 'function') window.scheduleReloadForClinic(); } catch (_e4) {}
         }
         function updateCurrentClinicDisplay() {
             const el = document.getElementById('currentClinicDisplay');
