@@ -1553,17 +1553,16 @@
                                     <textarea id="billingItemDescription" placeholder="請描述收費項目的詳細內容" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"></textarea>
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="billingItemActive" checked class="mr-2 rounded">
-                                        <span class="text-sm font-medium text-gray-700">啟用此收費項目</span>
-                                    </label>
-                                </div>
-                                <div class="md:col-span-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="billingItemShared" class="mr-2 rounded">
-                                        <span class="text-sm font-medium text-gray-700">診所共用項目</span>
-                                    </label>
-                                    <p class="text-xs text-gray-500 mt-1">勾選後此項目將供所有診所使用</p>
+                                    <div class="flex items-center gap-6">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="billingItemActive" checked class="mr-2 rounded">
+                                            <span class="text-sm font-medium text-gray-700">啟用此收費項目</span>
+                                        </label>
+                                        <label class="flex items-center" title="勾選後此項目將供所有診所使用">
+                                            <input type="checkbox" id="billingItemShared" class="mr-2 rounded">
+                                            <span class="text-sm font-medium text-gray-700">診所共用項目</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1759,12 +1758,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">醫師篩選</label>
-                            <select id="doctorFilter" onchange="generateFinancialReport()" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="">全部醫師</option>
-                            </select>
-                            <select id="clinicFilterFinancial" onchange="generateFinancialReport()" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="">全部診所</option>
-                            </select>
+                            <div class="flex gap-4">
+                                <select id="doctorFilter" onchange="generateFinancialReport()" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                    <option value="">全部醫師</option>
+                                </select>
+                                <select id="clinicFilterFinancial" onchange="generateFinancialReport()" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                    <option value="">全部診所</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="flex items-end space-x-2">
