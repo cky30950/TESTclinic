@@ -23273,6 +23273,17 @@ async function displayMedicalRecords(pageChange = false) {
                     doctorName = rec.doctor.displayName || rec.doctor.name || rec.doctor.fullName || rec.doctor.email || '';
                 }
             }
+            let clinicName = '';
+            try {
+                if (rec.clinicName) {
+                    clinicName = rec.clinicName;
+                } else if (rec.clinicId) {
+                    const foundClinic = Array.isArray(clinicsList)
+                        ? clinicsList.find(c => String(c.id) === String(rec.clinicId))
+                        : null;
+                    clinicName = foundClinic ? (foundClinic.chineseName || foundClinic.englishName || '') : '';
+                }
+            } catch (_eClinicList) {}
             let dateStr = '';
             try {
                 const rawDate = rec.date || null;
@@ -23297,7 +23308,7 @@ async function displayMedicalRecords(pageChange = false) {
             }
             tbody.innerHTML += `
                 <tr>
-                    <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(recordNumDisplay)}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(recordNumDisplay)}${clinicName ? ' 診所：' + window.escapeHtml(clinicName) : ''}</td>
                     <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(patientName)}</td>
                     <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(complaintDisplay)}</td>
                     <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(doctorName)}</td>
