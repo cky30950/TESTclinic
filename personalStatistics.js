@@ -6,6 +6,7 @@ let personalHerbChartInstance = null;
 let personalFormulaChartInstance = null;
 let personalAcupointChartInstance = null;
 let personalStatsCurrentMonth = null;
+let personalStatsCurrentClinic = 'ALL';
 
 function psReadCache(doctor) {
     try {
@@ -89,6 +90,11 @@ function computeStatsFromSummaries(list) {
         } catch (_e) {}
     }
     return { herbCounts, formulaCounts, acupointCounts };
+}
+
+function filterByClinic(list, clinicId) {
+    if (!clinicId || clinicId === 'ALL') return list || [];
+    return (list || []).filter(it => String(it.clinicId || '') === String(clinicId));
 }
 
 function filterByMonth(list, monthKey) {
@@ -185,7 +191,9 @@ async function fetchSummariesByDoctor(doctor) {
                 prescription: d.prescription || '',
                 acupunctureNotes: d.acupunctureNotes || '',
                 updatedAt,
-                dateIso
+                dateIso,
+                clinicId: d.clinicId || null,
+                clinicName: d.clinicName || ''
             });
         };
         snap.forEach(collect);
@@ -236,7 +244,9 @@ async function fetchSummariesByDoctor(doctor) {
                         prescription: d.prescription || '',
                         acupunctureNotes: d.acupunctureNotes || '',
                         updatedAt: d.updatedAt || d.createdAt || null,
-                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null
+                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null,
+                        clinicId: d.clinicId || null,
+                        clinicName: d.clinicName || ''
                     });
                 }
             }
@@ -275,7 +285,9 @@ async function fetchSummariesUnionDoctorOrCreator(doctor) {
                 prescription: d.prescription || '',
                 acupunctureNotes: d.acupunctureNotes || '',
                 updatedAt,
-                dateIso
+                dateIso,
+                clinicId: d.clinicId || null,
+                clinicName: d.clinicName || ''
             };
             const key = String(item.id);
             if (!seen.has(key)) {
@@ -337,7 +349,9 @@ async function fetchSummariesUnionDoctorOrCreator(doctor) {
                         prescription: d.prescription || '',
                         acupunctureNotes: d.acupunctureNotes || '',
                         updatedAt: d.updatedAt || d.createdAt || null,
-                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null
+                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null,
+                        clinicId: d.clinicId || null,
+                        clinicName: d.clinicName || ''
                     };
                     const key = String(item.id);
                     if (!seen.has(key)) {
@@ -362,7 +376,9 @@ async function applyDeltaUpdates(doctor, sinceISO, existingList) {
                     prescription: d.prescription || '',
                     acupunctureNotes: d.acupunctureNotes || '',
                     updatedAt: d.updatedAt || d.createdAt || null,
-                    dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null
+                    dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null,
+                    clinicId: d.clinicId || null,
+                    clinicName: d.clinicName || ''
                 };
                 index.set(String(item.id), item);
             }
@@ -402,7 +418,55 @@ function populateMonthSelect(months, currentKey) {
         try {
             const cache = psReadCache(currentUser);
             const list = cache && Array.isArray(cache.list) ? cache.list : [];
-            const sub = personalStatsCurrentMonth === 'ALL' ? list : filterByMonth(list, personalStatsCurrentMonth);
+            const byClinic = filterByClinic(list, personalStatsCurrentClinic);
+            const sub = personalStatsCurrentMonth === 'ALL' ? byClinic : filterByMonth(byClinic, personalStatsCurrentMonth);
+            const stats = computeStatsFromSummaries(sub);
+            renderPersonalStatistics(stats);
+        } catch (_e) {}
+    };
+}
+
+function readClinicsForPersonalStats() {
+    try {
+        const s = localStorage.getItem('clinics');
+        const arr = s ? JSON.parse(s) : [];
+        if (!Array.isArray(arr)) return [];
+        return arr.map(c => ({
+            id: c && c.id ? c.id : '',
+            name: (c && (c.chineseName || c.englishName)) ? (c.chineseName || c.englishName) : (c && c.id ? c.id : '')
+        }));
+    } catch (_e) {
+        return [];
+    }
+}
+
+function populateClinicSelect(initialClinicId) {
+    const sel = document.getElementById('personalStatsClinicSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = 'ALL';
+    allOpt.textContent = '全部診所';
+    sel.appendChild(allOpt);
+    const clinics = readClinicsForPersonalStats();
+    clinics.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name || c.id || '';
+        sel.appendChild(opt);
+    });
+    const desired = initialClinicId || 'ALL';
+    sel.value = desired;
+    personalStatsCurrentClinic = desired;
+    sel.onchange = function () {
+        personalStatsCurrentClinic = this.value || personalStatsCurrentClinic;
+        try {
+            const cache = psReadCache(currentUser);
+            const list = cache && Array.isArray(cache.list) ? cache.list : [];
+            const byClinic = filterByClinic(list, personalStatsCurrentClinic);
+            const months = computeAvailableMonths(byClinic);
+            populateMonthSelect(months, personalStatsCurrentMonth || 'ALL');
+            const sub = personalStatsCurrentMonth === 'ALL' ? byClinic : filterByMonth(byClinic, personalStatsCurrentMonth);
             const stats = computeStatsFromSummaries(sub);
             renderPersonalStatistics(stats);
         } catch (_e) {}
@@ -413,16 +477,24 @@ async function loadPersonalStatistics() {
     const doctor = currentUser;
     const cached = psReadCache(doctor);
     if (cached && cached.stats) {
-        const months = computeAvailableMonths(cached.list || []);
+        populateClinicSelect('ALL');
+        const byClinicInit = filterByClinic(cached.list || [], personalStatsCurrentClinic);
+        const months = computeAvailableMonths(byClinicInit);
         populateMonthSelect(months, 'ALL');
         const initialList = cached.list || [];
-        renderPersonalStatistics(computeStatsFromSummaries(initialList));
+        const initialFiltered = personalStatsCurrentMonth === 'ALL'
+            ? filterByClinic(initialList, personalStatsCurrentClinic)
+            : filterByMonth(filterByClinic(initialList, personalStatsCurrentClinic), personalStatsCurrentMonth);
+        renderPersonalStatistics(computeStatsFromSummaries(initialFiltered));
         try {
             if (!cached.fullFetched) {
                 const full = await fetchSummariesUnionDoctorOrCreator(doctor);
-                const monthsFull = computeAvailableMonths(full);
+                const byClinicFull = filterByClinic(full, personalStatsCurrentClinic);
+                const monthsFull = computeAvailableMonths(byClinicFull);
                 populateMonthSelect(monthsFull, personalStatsCurrentMonth || 'ALL');
-                const useFull = personalStatsCurrentMonth === 'ALL' ? full : filterByMonth(full, personalStatsCurrentMonth);
+                const useFull = personalStatsCurrentMonth === 'ALL'
+                    ? byClinicFull
+                    : filterByMonth(byClinicFull, personalStatsCurrentMonth);
                 const statsFull = computeStatsFromSummaries(useFull);
                 const lastFull = (() => {
                     let latest = 0;
@@ -440,9 +512,12 @@ async function loadPersonalStatistics() {
                 return;
             }
             const merged = await fetchSummariesUnionDoctorOrCreator(doctor);
-            const months2 = computeAvailableMonths(merged);
+            const byClinic2 = filterByClinic(merged, personalStatsCurrentClinic);
+            const months2 = computeAvailableMonths(byClinic2);
             populateMonthSelect(months2, personalStatsCurrentMonth || 'ALL');
-            const initialList2 = personalStatsCurrentMonth === 'ALL' ? merged : filterByMonth(merged, personalStatsCurrentMonth);
+            const initialList2 = personalStatsCurrentMonth === 'ALL'
+                ? byClinic2
+                : filterByMonth(byClinic2, personalStatsCurrentMonth);
             const stats = computeStatsFromSummaries(initialList2);
             const lastSyncAt = (() => {
                 let latest = 0;
@@ -461,10 +536,14 @@ async function loadPersonalStatistics() {
         return;
     }
     const summaries = await fetchSummariesUnionDoctorOrCreator(doctor);
-    const months = computeAvailableMonths(summaries);
+    populateClinicSelect('ALL');
+    const byClinicInitial = filterByClinic(summaries, personalStatsCurrentClinic);
+    const months = computeAvailableMonths(byClinicInitial);
     populateMonthSelect(months, 'ALL');
-    const initialList = summaries;
-    const stats = computeStatsFromSummaries(initialList);
+    const initialFiltered = personalStatsCurrentMonth === 'ALL'
+        ? byClinicInitial
+        : filterByMonth(byClinicInitial, personalStatsCurrentMonth);
+    const stats = computeStatsFromSummaries(initialFiltered);
     const lastSyncAt = (() => {
         let latest = 0;
         for (const c of summaries) {
