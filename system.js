@@ -23308,7 +23308,8 @@ async function displayMedicalRecords(pageChange = false) {
             }
             tbody.innerHTML += `
                 <tr>
-                    <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(recordNumDisplay)}${clinicName ? ' 診所：' + window.escapeHtml(clinicName) : ''}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(recordNumDisplay)}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${clinicName ? window.escapeHtml(clinicName) : ''}</td>
                     <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(patientName)}</td>
                     <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(complaintDisplay)}</td>
                     <td class="px-4 py-2 whitespace-nowrap">${window.escapeHtml(doctorName)}</td>
