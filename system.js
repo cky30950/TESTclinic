@@ -1843,6 +1843,22 @@ async function fetchUsers(forceRefresh = false) {
             } catch (_e4) {}
         }
         async function setCurrentClinicId(id) {
+            try {
+                const consultFormEl = document.getElementById('consultationForm');
+                const isConsultFormVisible = consultFormEl && !consultFormEl.classList.contains('hidden');
+                const isConsulting = (typeof currentConsultingAppointmentId !== 'undefined' && currentConsultingAppointmentId);
+                if (isConsultFormVisible || isConsulting) {
+                    const lang = localStorage.getItem('lang') || 'zh';
+                    const zhMsg = '目前正在診症或修改病歷，請先完成或關閉後再切換診所';
+                    const enMsg = 'You are consulting or editing a medical record. Finish or close before switching clinic.';
+                    showToast(lang === 'en' ? enMsg : zhMsg, 'warning');
+                    try {
+                        const sel = document.getElementById('currentClinicSelector');
+                        if (sel && currentClinicId) sel.value = currentClinicId;
+                    } catch (_eSel) {}
+                    return;
+                }
+            } catch (_guardErr) {}
             currentClinicId = id;
             localStorage.setItem('currentClinicId', currentClinicId);
             const cur = await window.firebaseDataManager.getClinicById(currentClinicId);
