@@ -442,7 +442,9 @@
                     </div>
                     <div class="flex items-center space-x-4">
                         <span id="currentClinicDisplay" class="text-sm text-gray-600">當前診所：</span>
-                        <select id="currentClinicSelector" class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>
+                        <button id="clinicSwitchButton" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                            切換
+                        </button>
                         <span id="userRole" class="text-sm text-gray-600"></span>
                         <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
                             登出
@@ -451,6 +453,18 @@
                 </div>
             </div>
         </nav>
+        <!-- 切換診所彈窗 -->
+        <div id="clinicSwitchModal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+            <div class="relative max-w-md mx-auto mt-24 bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">切換診所</h3>
+                <select id="currentClinicSelector" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>
+                <div class="flex justify-end space-x-2 mt-6">
+                    <button id="clinicSwitchCloseButton" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm transition duration-200">關閉</button>
+                    <button id="clinicSwitchConfirmButton" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">確定</button>
+                </div>
+            </div>
+        </div>
         <!-- 主要內容區域 -->
         <!-- 主要內容包裝區，新增 id 方便在顯示個人設置或模板庫時隱藏整個包裝 -->
         <div id="contentWrapper" class="max-w-7xl mx-auto px-4 py-6">

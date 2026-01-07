@@ -1880,7 +1880,18 @@ async function fetchUsers(forceRefresh = false) {
         function updateCurrentClinicDisplay() {
             const el = document.getElementById('currentClinicDisplay');
             if (el) {
-                el.textContent = '當前診所：';
+                let name = '';
+                try { name = clinicSettings.chineseName || clinicSettings.englishName || ''; } catch (_eName) {}
+                if (!name) {
+                    try {
+                        if (Array.isArray(clinicsList)) {
+                            const c = clinicsList.find(c => String(c.id) === String(currentClinicId));
+                            name = (c && (c.chineseName || c.englishName)) || '';
+                        }
+                    } catch (_eList) {}
+                }
+                if (!name) name = currentClinicId || '';
+                el.textContent = '當前診所：' + name;
             }
             try {
                 const currentSel = document.getElementById('currentClinicSelector');
@@ -22804,6 +22815,64 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        try {
+            const switchBtn = document.getElementById('clinicSwitchButton');
+            if (switchBtn && !switchBtn.dataset.bound) {
+                switchBtn.addEventListener('click', function () {
+                    try {
+                        const modal = document.getElementById('clinicSwitchModal');
+                        if (modal) {
+                            modal.classList.remove('hidden');
+                            try { if (typeof populateClinicSelectors === 'function') populateClinicSelectors(); } catch (_e) {}
+                        }
+                    } catch (e) {
+                        console.error('切換診所按鈕事件錯誤:', e);
+                    }
+                });
+                switchBtn.dataset.bound = 'true';
+            }
+            const closeBtn = document.getElementById('clinicSwitchCloseButton');
+            if (closeBtn && !closeBtn.dataset.bound) {
+                closeBtn.addEventListener('click', function () {
+                    try {
+                        const modal = document.getElementById('clinicSwitchModal');
+                        if (modal) modal.classList.add('hidden');
+                    } catch (e) {
+                        console.error('關閉切換診所彈窗錯誤:', e);
+                    }
+                });
+                closeBtn.dataset.bound = 'true';
+            }
+            const confirmBtn = document.getElementById('clinicSwitchConfirmButton');
+            if (confirmBtn && !confirmBtn.dataset.bound) {
+                confirmBtn.addEventListener('click', async function () {
+                    try {
+                        const sel = document.getElementById('currentClinicSelector');
+                        if (sel && sel.value) {
+                            await setCurrentClinicId(sel.value);
+                        }
+                        const modal = document.getElementById('clinicSwitchModal');
+                        if (modal) modal.classList.add('hidden');
+                    } catch (e) {
+                        console.error('確定切換診所錯誤:', e);
+                    }
+                });
+                confirmBtn.dataset.bound = 'true';
+            }
+            try {
+                const modal = document.getElementById('clinicSwitchModal');
+                if (modal) {
+                    const overlay = modal.querySelector('.absolute');
+                    if (overlay && !overlay.dataset.bound) {
+                        overlay.addEventListener('click', function () {
+                            try { modal.classList.add('hidden'); } catch (_e) {}
+                        });
+                        overlay.dataset.bound = 'true';
+                    }
+                }
+            } catch (_e) {}
+        } catch (_e) {}
+ 
         // 病人資料管理：新增/隱藏/儲存事件綁定
         // 新增病人按鈕
         const showAddPatientBtn = document.getElementById('showAddPatientButton');
