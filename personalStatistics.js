@@ -7,6 +7,7 @@ let personalFormulaChartInstance = null;
 let personalAcupointChartInstance = null;
 let personalStatsCurrentMonth = null;
 let personalStatsCurrentClinic = 'ALL';
+let personalStatsSelectedClinicName = '';
 
 function psReadCache(doctor) {
     try {
@@ -92,9 +93,22 @@ function computeStatsFromSummaries(list) {
     return { herbCounts, formulaCounts, acupointCounts };
 }
 
-function filterByClinic(list, clinicId) {
+function normalizeText(s) {
+    if (s == null) return '';
+    try {
+        return String(s).trim().toLowerCase();
+    } catch (_e) { return ''; }
+}
+
+function filterByClinic(list, clinicId, clinicName) {
     if (!clinicId || clinicId === 'ALL') return list || [];
-    return (list || []).filter(it => String(it.clinicId || '') === String(clinicId));
+    const idNorm = normalizeText(clinicId);
+    const nameNorm = normalizeText(clinicName);
+    return (list || []).filter(it => {
+        const itemId = normalizeText(it.clinicId || '');
+        const itemName = normalizeText(it.clinicName || '');
+        return (itemId && itemId === idNorm) || (itemName && nameNorm && itemName === nameNorm);
+    });
 }
 
 function filterByMonth(list, monthKey) {
@@ -418,7 +432,7 @@ function populateMonthSelect(months, currentKey) {
         try {
             const cache = psReadCache(currentUser);
             const list = cache && Array.isArray(cache.list) ? cache.list : [];
-            const byClinic = filterByClinic(list, personalStatsCurrentClinic);
+            const byClinic = filterByClinic(list, personalStatsCurrentClinic, personalStatsSelectedClinicName);
             const sub = personalStatsCurrentMonth === 'ALL' ? byClinic : filterByMonth(byClinic, personalStatsCurrentMonth);
             const stats = computeStatsFromSummaries(sub);
             renderPersonalStatistics(stats);
@@ -458,12 +472,19 @@ function populateClinicSelect(initialClinicId) {
     const desired = initialClinicId || 'ALL';
     sel.value = desired;
     personalStatsCurrentClinic = desired;
+    const curObj = clinics.find(c => String(c.id) === String(desired));
+    personalStatsSelectedClinicName = curObj ? (curObj.name || '') : '';
     sel.onchange = function () {
         personalStatsCurrentClinic = this.value || personalStatsCurrentClinic;
         try {
+            const cList = readClinicsForPersonalStats();
+            const found = cList.find(c => String(c.id) === String(personalStatsCurrentClinic));
+            personalStatsSelectedClinicName = found ? (found.name || '') : '';
+        } catch (_e0) {}
+        try {
             const cache = psReadCache(currentUser);
             const list = cache && Array.isArray(cache.list) ? cache.list : [];
-            const byClinic = filterByClinic(list, personalStatsCurrentClinic);
+            const byClinic = filterByClinic(list, personalStatsCurrentClinic, personalStatsSelectedClinicName);
             const months = computeAvailableMonths(byClinic);
             populateMonthSelect(months, personalStatsCurrentMonth || 'ALL');
             const sub = personalStatsCurrentMonth === 'ALL' ? byClinic : filterByMonth(byClinic, personalStatsCurrentMonth);
@@ -478,18 +499,18 @@ async function loadPersonalStatistics() {
     const cached = psReadCache(doctor);
     if (cached && cached.stats) {
         populateClinicSelect('ALL');
-        const byClinicInit = filterByClinic(cached.list || [], personalStatsCurrentClinic);
+        const byClinicInit = filterByClinic(cached.list || [], personalStatsCurrentClinic, personalStatsSelectedClinicName);
         const months = computeAvailableMonths(byClinicInit);
         populateMonthSelect(months, 'ALL');
         const initialList = cached.list || [];
         const initialFiltered = personalStatsCurrentMonth === 'ALL'
-            ? filterByClinic(initialList, personalStatsCurrentClinic)
-            : filterByMonth(filterByClinic(initialList, personalStatsCurrentClinic), personalStatsCurrentMonth);
+            ? filterByClinic(initialList, personalStatsCurrentClinic, personalStatsSelectedClinicName)
+            : filterByMonth(filterByClinic(initialList, personalStatsCurrentClinic, personalStatsSelectedClinicName), personalStatsCurrentMonth);
         renderPersonalStatistics(computeStatsFromSummaries(initialFiltered));
         try {
             if (!cached.fullFetched) {
                 const full = await fetchSummariesUnionDoctorOrCreator(doctor);
-                const byClinicFull = filterByClinic(full, personalStatsCurrentClinic);
+                const byClinicFull = filterByClinic(full, personalStatsCurrentClinic, personalStatsSelectedClinicName);
                 const monthsFull = computeAvailableMonths(byClinicFull);
                 populateMonthSelect(monthsFull, personalStatsCurrentMonth || 'ALL');
                 const useFull = personalStatsCurrentMonth === 'ALL'
@@ -512,7 +533,7 @@ async function loadPersonalStatistics() {
                 return;
             }
             const merged = await fetchSummariesUnionDoctorOrCreator(doctor);
-            const byClinic2 = filterByClinic(merged, personalStatsCurrentClinic);
+            const byClinic2 = filterByClinic(merged, personalStatsCurrentClinic, personalStatsSelectedClinicName);
             const months2 = computeAvailableMonths(byClinic2);
             populateMonthSelect(months2, personalStatsCurrentMonth || 'ALL');
             const initialList2 = personalStatsCurrentMonth === 'ALL'
@@ -537,7 +558,7 @@ async function loadPersonalStatistics() {
     }
     const summaries = await fetchSummariesUnionDoctorOrCreator(doctor);
     populateClinicSelect('ALL');
-    const byClinicInitial = filterByClinic(summaries, personalStatsCurrentClinic);
+    const byClinicInitial = filterByClinic(summaries, personalStatsCurrentClinic, personalStatsSelectedClinicName);
     const months = computeAvailableMonths(byClinicInitial);
     populateMonthSelect(months, 'ALL');
     const initialFiltered = personalStatsCurrentMonth === 'ALL'
