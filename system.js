@@ -9134,6 +9134,7 @@ async function saveConsultation() {
         const consultationData = {
             appointmentId: currentConsultingAppointmentId,
             patientId: appointment.patientId,
+            patientName: appointment.patientName,
             symptoms: symptoms,
             tongue: document.getElementById('formTongue').value.trim(),
             pulse: document.getElementById('formPulse').value.trim(),
