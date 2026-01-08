@@ -1756,17 +1756,18 @@ async function fetchUsers(forceRefresh = false) {
                 }
             } catch (_e2) {}
             try {
-                const currentSel = document.getElementById('currentClinicSelector');
+                let currentSel = document.getElementById('currentClinicSelector');
                 if (currentSel) {
+                    // 移除既有事件綁定：複製節點並替換，以確保選擇不會觸發讀取
+                    const parent = currentSel.parentNode;
+                    const cloned = currentSel.cloneNode(false);
+                    if (parent && cloned) {
+                        parent.replaceChild(cloned, currentSel);
+                        currentSel = cloned;
+                    }
                     currentSel.innerHTML = clinicsList.map(c => `<option value="${c.id}">${c.chineseName || c.englishName || c.id}</option>`).join('');
                     if (currentClinicId) currentSel.value = currentClinicId;
-                    // 避免重複綁定
-                    if (!currentSel.dataset.bound) {
-                        currentSel.addEventListener('change', function() {
-                            setCurrentClinicId(this.value);
-                        });
-                        currentSel.dataset.bound = 'true';
-                    }
+                    // 不在 change 綁定 setCurrentClinicId，改由「確定」按鈕處理
                 }
             } catch (_e3) {}
             try {
