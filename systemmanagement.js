@@ -511,6 +511,68 @@ async function importClinicBackup(data) {
             console.error('更新 ' + collectionName + ' 資料時發生錯誤:', err);
         }
     }
+    async function replaceClinicBillingItems(items) {
+        try {
+            await waitForFirebaseDb();
+            const clinicId = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+            const clinicCol = window.firebase.collection(window.firebase.db, 'clinics', clinicId, 'billingItems');
+            const globalCol = window.firebase.collection(window.firebase.db, 'globalBillingItems');
+            const clinicSnap = await window.firebase.getDocs(clinicCol);
+            const globalSnap = await window.firebase.getDocs(globalCol);
+            const existingClinicIds = new Set();
+            const existingGlobalIds = new Set();
+            clinicSnap.forEach(d => existingClinicIds.add(d.id));
+            globalSnap.forEach(d => existingGlobalIds.add(d.id));
+            const newClinicIds = new Set();
+            const newGlobalIds = new Set();
+            if (Array.isArray(items)) {
+                items.forEach(it => {
+                    if (!it || it.id === undefined || it.id === null) return;
+                    const idStr = String(it.id);
+                    if (it.shared) newGlobalIds.add(idStr);
+                    else newClinicIds.add(idStr);
+                });
+            }
+            const batch = window.firebase.writeBatch(window.firebase.db);
+            let opCount = 0;
+            const commitIfNeeded = async () => {
+                if (opCount > 0) {
+                    await batch.commit();
+                    opCount = 0;
+                }
+            };
+            existingClinicIds.forEach(id => {
+                if (!newClinicIds.has(id)) {
+                    batch.delete(window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', id));
+                    opCount++;
+                }
+            });
+            existingGlobalIds.forEach(id => {
+                if (!newGlobalIds.has(id)) {
+                    batch.delete(window.firebase.doc(window.firebase.db, 'globalBillingItems', id));
+                    opCount++;
+                }
+            });
+            if (Array.isArray(items)) {
+                for (const it of items) {
+                    if (!it || it.id === undefined || it.id === null) continue;
+                    const { id, ...rest } = it || {};
+                    const dataToWrite = { ...rest };
+                    const idStr = String(it.id);
+                    if (it.shared) {
+                        batch.set(window.firebase.doc(window.firebase.db, 'globalBillingItems', idStr), dataToWrite);
+                    } else {
+                        batch.set(window.firebase.doc(window.firebase.db, 'clinics', clinicId, 'billingItems', idStr), dataToWrite);
+                    }
+                    opCount++;
+                    if (opCount >= 500) await commitIfNeeded();
+                }
+            }
+            await commitIfNeeded();
+        } catch (err) {
+            console.error('更新收費項目資料時發生錯誤:', err);
+        }
+    }
     function parseBackupDate(dateInput) {
         try {
             if (!dateInput) return null;
@@ -567,7 +629,7 @@ async function importClinicBackup(data) {
     stepCount++;
     if (progressCallback) progressCallback(stepCount, totalSteps);
 
-    await replaceCollection('billingItems', Array.isArray(data.billingItems) ? data.billingItems : []);
+    await replaceClinicBillingItems(Array.isArray(data.billingItems) ? data.billingItems : []);
     stepCount++;
     if (progressCallback) progressCallback(stepCount, totalSteps);
 
@@ -676,10 +738,9 @@ async function importClinicBackup(data) {
         billingItems = Array.isArray(data.billingItems) ? data.billingItems : [];
         billingItemsLoaded = true;
         try {
-            localStorage.setItem('billingItems', JSON.stringify(billingItems));
-        } catch (_lsErr) {
-            // 忽略 localStorage 錯誤
-        }
+            const cid = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+            localStorage.setItem(`billingItems_${cid}`, JSON.stringify(billingItems));
+        } catch (_lsErr) {}
         // 更新病人總數快取
         patientsCountCache = Array.isArray(patientCache) ? patientCache.length : 0;
         // 重新產生病人分頁快取，使 fetchPatientsPage() 可以直接從快取取得資料
