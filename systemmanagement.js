@@ -511,6 +511,47 @@ async function importClinicBackup(data) {
             console.error('更新 ' + collectionName + ' 資料時發生錯誤:', err);
         }
     }
+    function parseBackupDate(dateInput) {
+        try {
+            if (!dateInput) return null;
+            if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
+            if (typeof dateInput === 'object' && dateInput.seconds !== undefined) {
+                const d = new Date(dateInput.seconds * 1000);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            if (typeof dateInput === 'string') {
+                const d = new Date(dateInput);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            if (typeof dateInput === 'number') {
+                const d = new Date(dateInput);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            return null;
+        } catch (_e) {
+            return null;
+        }
+    }
+    function normalizeConsultations(items) {
+        if (!Array.isArray(items)) return [];
+        return items.map(c => {
+            const clone = { ...(c || {}) };
+            if (clone.id !== undefined && clone.id !== null) clone.id = String(clone.id);
+            if (clone.patientId !== undefined && clone.patientId !== null) clone.patientId = String(clone.patientId);
+            let d = parseBackupDate(clone.date || clone.createdAt || clone.updatedAt || null);
+            if (!d) d = new Date(0);
+            clone.date = d;
+            if (clone.createdAt) {
+                const ca = parseBackupDate(clone.createdAt);
+                if (ca) clone.createdAt = ca;
+            }
+            if (clone.updatedAt) {
+                const ua = parseBackupDate(clone.updatedAt);
+                if (ua) clone.updatedAt = ua;
+            }
+            return clone;
+        });
+    }
     // 覆蓋各集合並更新進度
     let stepCount = 0;
     // 覆蓋需要還原的集合，順序為：patients -> consultations -> users -> billingItems -> patientPackages
@@ -518,7 +559,7 @@ async function importClinicBackup(data) {
     stepCount++;
     if (progressCallback) progressCallback(stepCount, totalSteps);
 
-    await replaceCollection('consultations', Array.isArray(data.consultations) ? data.consultations : []);
+    await replaceCollection('consultations', normalizeConsultations(Array.isArray(data.consultations) ? data.consultations : []));
     stepCount++;
     if (progressCallback) progressCallback(stepCount, totalSteps);
 
@@ -597,16 +638,7 @@ async function importClinicBackup(data) {
             });
         }
         consultationCache = Array.isArray(data.consultations)
-            ? data.consultations.map(c => {
-                const clone = { ...(c || {}) };
-                if (clone.id !== undefined && clone.id !== null) {
-                    clone.id = String(clone.id);
-                }
-                if (clone.patientId !== undefined && clone.patientId !== null) {
-                    clone.patientId = String(clone.patientId);
-                }
-                return clone;
-            })
+            ? normalizeConsultations(data.consultations)
             : [];
         userCache = Array.isArray(data.users)
             ? data.users.map(u => {
