@@ -1842,6 +1842,34 @@ async function fetchUsers(forceRefresh = false) {
                 }
             } catch (_e4) {}
         }
+        let _globalLoadingTotal = 0;
+        let _globalLoadingCurrent = 0;
+        function showGlobalLoading(total = 100, text = '') {
+            _globalLoadingTotal = total > 0 ? total : 100;
+            _globalLoadingCurrent = 0;
+            const overlay = document.getElementById('globalLoadingOverlay');
+            const bar = document.getElementById('globalLoadingProgressBar');
+            const percent = document.getElementById('globalLoadingPercent');
+            const t = document.getElementById('globalLoadingText');
+            if (overlay) overlay.classList.remove('hidden');
+            if (bar) bar.style.width = '0%';
+            if (percent) percent.textContent = '0%';
+            if (t && text) t.textContent = text;
+        }
+        function advanceGlobalLoading(step = 1) {
+            _globalLoadingCurrent += step;
+            const p = Math.max(0, Math.min(100, Math.round((_globalLoadingCurrent / _globalLoadingTotal) * 100)));
+            const bar = document.getElementById('globalLoadingProgressBar');
+            const percent = document.getElementById('globalLoadingPercent');
+            if (bar) bar.style.width = p + '%';
+            if (percent) percent.textContent = p + '%';
+        }
+        function hideGlobalLoading() {
+            const overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) overlay.classList.add('hidden');
+            _globalLoadingTotal = 0;
+            _globalLoadingCurrent = 0;
+        }
         async function setCurrentClinicId(id) {
             try {
                 const consultFormEl = document.getElementById('consultationForm');
@@ -1859,23 +1887,32 @@ async function fetchUsers(forceRefresh = false) {
                     return;
                 }
             } catch (_guardErr) {}
+            showGlobalLoading(7, '切換診所並載入所需資料…');
             currentClinicId = id;
             localStorage.setItem('currentClinicId', currentClinicId);
             const cur = await window.firebaseDataManager.getClinicById(currentClinicId);
             clinicSettings = cur && cur.success && cur.data ? cur.data : {};
+            advanceGlobalLoading();
             try {
                 if (Array.isArray(clinicsList)) {
                     clinicsList = clinicsList.map(c => (String(c.id) === String(currentClinicId) ? { ...c, ...clinicSettings } : c));
                 }
             } catch (_e) {}
             updateClinicSettingsDisplay();
+            advanceGlobalLoading();
             updateCurrentClinicDisplay();
+            advanceGlobalLoading();
             try { populateClinicSelectors(); } catch (_e2) {}
+            advanceGlobalLoading();
             try { localStorage.setItem('clinics', JSON.stringify(clinicsList)); } catch (_e3) {}
             try { loadTodayAppointments(); } catch (_e) {}
+            advanceGlobalLoading();
             try { if (typeof window.scheduleReloadForClinic === 'function') window.scheduleReloadForClinic(); } catch (_e4) {}
             try { await initBillingItems(true); } catch (_e5) {}
+            advanceGlobalLoading();
             try { if (typeof displayBillingItems === 'function') displayBillingItems(); } catch (_e6) {}
+            advanceGlobalLoading();
+            hideGlobalLoading();
         }
         function updateCurrentClinicDisplay() {
             const el = document.getElementById('currentClinicDisplay');

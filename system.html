@@ -465,6 +465,20 @@
                 </div>
             </div>
         </div>
+        <!-- 全局載入遮罩與進度條 -->
+        <div id="globalLoadingOverlay" class="fixed inset-0 hidden" style="z-index: 60;">
+            <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+            <div class="relative max-w-md mx-auto mt-32 bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-base font-semibold mb-4 text-gray-800">正在載入資料</h3>
+                <div class="w-full bg-gray-200 rounded h-2 overflow-hidden">
+                    <div id="globalLoadingProgressBar" class="bg-indigo-500 h-2 rounded" style="width:0%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-3">
+                    <p id="globalLoadingText" class="text-sm text-gray-700">切換診所並載入所需資料…</p>
+                    <span id="globalLoadingPercent" class="text-sm text-gray-600">0%</span>
+                </div>
+            </div>
+        </div>
         <!-- 主要內容區域 -->
         <!-- 主要內容包裝區，新增 id 方便在顯示個人設置或模板庫時隱藏整個包裝 -->
         <div id="contentWrapper" class="max-w-7xl mx-auto px-4 py-6">
