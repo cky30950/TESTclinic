@@ -655,8 +655,21 @@ async function importClinicBackup(data) {
     const rtdbData = data && typeof data.rtdb === 'object' ? data.rtdb : null;
     if (rtdbData) {
         try {
-            for (const key of Object.keys(rtdbData)) {
-                await window.firebase.set(window.firebase.ref(window.firebase.rtdb, key), rtdbData[key]);
+            const clinicId = (function() {
+                try {
+                    return localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+                } catch (_e) {
+                    return (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default') || 'local-default';
+                }
+            })();
+            const needsClinicScope = new Set(['herbInventory', 'herbInventorySlice', 'scheduleShifts']);
+            for (const rawKey of Object.keys(rtdbData)) {
+                const key = String(rawKey);
+                const shouldScope = needsClinicScope.has(key);
+                const finalPath = shouldScope
+                    ? `clinics/${String(clinicId)}/${key}`
+                    : key;
+                await window.firebase.set(window.firebase.ref(window.firebase.rtdb, finalPath), rtdbData[rawKey]);
             }
             // 更新本地中藥庫存或其他即時資料快取
             if (typeof initHerbInventory === 'function') {
@@ -667,6 +680,12 @@ async function importClinicBackup(data) {
                     herbInventoryInitialized = true;
                 } catch (_e) {}
             }
+            // 重新載入排班資料以反映當前診所
+            try {
+                if (typeof window.scheduleReloadForClinic === 'function') {
+                    await window.scheduleReloadForClinic();
+                }
+            } catch (_eSched) {}
         } catch (err) {
             console.error('還原 Realtime Database 資料時發生錯誤:', err);
         }
