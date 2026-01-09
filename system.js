@@ -23800,13 +23800,31 @@ async function searchMedicalRecords(term, limitCount = 50) {
             const col = window.firebase.collection(window.firebase.db, 'consultations');
             const qPref = window.firebase.firestoreQuery(
                 col,
-                window.firebase.orderBy('medicalRecordNumber'),
+                window.firebase.orderBy('medicalRecordNumber', 'asc'),
                 window.firebase.startAt(termUpper),
                 window.firebase.endAt(termUpper + '\uf8ff'),
                 window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
             );
             const sPref = await window.firebase.getDocs(qPref);
             sPref.forEach(d => {
+                const id = String(d.id);
+                if (!seen.has(id) && out.length < limitCount) {
+                    out.push({ id: d.id, ...d.data() });
+                    seen.add(id);
+                }
+            });
+        } catch (_e) {}
+        try {
+            const col = window.firebase.collection(window.firebase.db, 'consultations');
+            const qPrefRaw = window.firebase.firestoreQuery(
+                col,
+                window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                window.firebase.startAt(term),
+                window.firebase.endAt(term + '\uf8ff'),
+                window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+            );
+            const sPrefRaw = await window.firebase.getDocs(qPrefRaw);
+            sPrefRaw.forEach(d => {
                 const id = String(d.id);
                 if (!seen.has(id) && out.length < limitCount) {
                     out.push({ id: d.id, ...d.data() });
