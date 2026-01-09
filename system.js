@@ -1911,6 +1911,8 @@ async function fetchUsers(forceRefresh = false) {
             try { if (typeof window.scheduleReloadForClinic === 'function') window.scheduleReloadForClinic(); } catch (_e4) {}
             try { await initBillingItems(true); } catch (_e5) {}
             advanceGlobalLoading();
+            try { await initHerbInventory(true); } catch (_eInv) {}
+            try { if (typeof displayHerbLibrary === 'function') displayHerbLibrary(); } catch (_eDisp) {}
             try { if (typeof displayBillingItems === 'function') displayBillingItems(); } catch (_e6) {}
             advanceGlobalLoading();
             hideGlobalLoading();
@@ -2601,19 +2603,21 @@ function detachPatientConsultationsListener(patientId) {
  * @param {boolean} forceRefresh
  */
 async function initHerbInventory(forceRefresh = false) {
-    // 根據當前庫存模式決定讀取資料的路徑。'granule' 對應原有顆粒沖劑資料，
-    // 'slice' 對應飲片資料。預設為 'herbInventory'。
-    const dbPath = (currentInventoryMode === 'slice') ? 'herbInventorySlice' : 'herbInventory';
-    // 如果不是強制刷新且已初始化過，且監聽器仍然存在且路徑未改變，直接返回。
-    // 若已初始化但監聽器已被取消（herbInventoryListenerAttached 為 false），或路徑改變時，仍需重新掛載監聽。
-    if (herbInventoryInitialized && herbInventoryListenerAttached && !forceRefresh && herbInventoryRefPath === dbPath) {
+    const clinicId = (function() {
+        try {
+            return localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+        } catch (_e) {
+            return (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default') || 'local-default';
+        }
+    })();
+    const basePath = (currentInventoryMode === 'slice') ? 'herbInventorySlice' : 'herbInventory';
+    const clinicPath = 'clinics/' + String(clinicId) + '/' + basePath;
+    if (herbInventoryInitialized && herbInventoryListenerAttached && !forceRefresh && herbInventoryRefPath === clinicPath) {
         return;
     }
-    // 等待 Firebase 初始化完成
     await waitForFirebaseDb();
-    const inventoryRef = window.firebase.ref(window.firebase.rtdb, dbPath);
-    // 若為強制刷新或路徑改變且監聽已經掛載，先取消舊的監聽以避免多重回呼
-    if ((forceRefresh || herbInventoryRefPath !== dbPath) && herbInventoryListenerAttached && typeof window.herbInventoryRef !== 'undefined' && window.herbInventoryRef) {
+    const inventoryRef = window.firebase.ref(window.firebase.rtdb, clinicPath);
+    if ((forceRefresh || herbInventoryRefPath !== clinicPath) && herbInventoryListenerAttached && typeof window.herbInventoryRef !== 'undefined' && window.herbInventoryRef) {
         try {
             window.firebase.off(window.herbInventoryRef, 'value');
             herbInventoryListenerAttached = false;
@@ -2621,17 +2625,20 @@ async function initHerbInventory(forceRefresh = false) {
             console.error('重置中藥庫存監聽時發生錯誤:', err);
         }
     }
-    // 更新全域參考及路徑，以便後續取消監聽
     try {
         window.herbInventoryRef = inventoryRef;
     } catch (_e) {
-        // 若無法設置全域，忽略
     }
-    herbInventoryRefPath = dbPath;
-    // 讀取當前庫存快照
+    herbInventoryRefPath = clinicPath;
     try {
         const snapshot = await window.firebase.get(inventoryRef);
-        herbInventory = snapshot && snapshot.exists() ? snapshot.val() || {} : {};
+        if (snapshot && snapshot.exists()) {
+            herbInventory = snapshot.val() || {};
+        } else {
+            const globalRef = window.firebase.ref(window.firebase.rtdb, basePath);
+            const globalSnap = await window.firebase.get(globalRef);
+            herbInventory = globalSnap && globalSnap.exists() ? globalSnap.val() || {} : {};
+        }
         herbInventoryInitialized = true;
         try {
             if (currentInventoryMode === 'slice') {
@@ -2647,7 +2654,6 @@ async function initHerbInventory(forceRefresh = false) {
         herbInventory = {};
         herbInventoryInitialized = true;
     }
-    // 若尚未掛載監聽器，或因強制刷新取消後需重新掛載，則註冊監聽器
     if (!herbInventoryListenerAttached) {
         window.firebase.onValue(inventoryRef, (snap) => {
             herbInventory = snap && snap.exists() ? snap.val() || {} : {};
@@ -2716,17 +2722,20 @@ async function setHerbInventory(itemId, quantity, threshold, unit, disabled) {
         data.threshold = Number(threshold);
     }
     if (unit !== undefined && unit !== null) {
-        // 儲存使用者選擇的單位，以便日後顯示
         data.unit = unit;
     }
-    // 新增 disabled 屬性：若提供此參數則更新停用狀態
     if (disabled !== undefined && disabled !== null) {
-        // 確保為布林值
         data.disabled = !!disabled;
     }
-    // 根據當前庫存模式選擇儲存路徑
-    const dbPath = (currentInventoryMode === 'slice') ? 'herbInventorySlice' : 'herbInventory';
-    const refPath = window.firebase.ref(window.firebase.rtdb, dbPath + '/' + String(itemId));
+    const clinicId = (function() {
+        try {
+            return localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+        } catch (_e) {
+            return (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default') || 'local-default';
+        }
+    })();
+    const basePath = (currentInventoryMode === 'slice') ? 'herbInventorySlice' : 'herbInventory';
+    const refPath = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/' + basePath + '/' + String(itemId));
     await window.firebase.update(refPath, data);
 }
 
@@ -2738,8 +2747,15 @@ async function setHerbInventory(itemId, quantity, threshold, unit, disabled) {
  */
 async function getHerbInventoryForMode(itemId, mode) {
     await waitForFirebaseDb();
+    const clinicId = (function() {
+        try {
+            return localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+        } catch (_e) {
+            return (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default') || 'local-default';
+        }
+    })();
     const path = (mode === 'slice') ? 'herbInventorySlice' : 'herbInventory';
-    const ref = window.firebase.ref(window.firebase.rtdb, path + '/' + String(itemId));
+    const ref = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/' + path + '/' + String(itemId));
     try {
         const snap = await window.firebase.get(ref);
         if (snap && snap.exists()) {
@@ -2752,6 +2768,19 @@ async function getHerbInventoryForMode(itemId, mode) {
             };
         }
     } catch (_e) {}
+    const globalRef = window.firebase.ref(window.firebase.rtdb, path + '/' + String(itemId));
+    try {
+        const gSnap = await window.firebase.get(globalRef);
+        if (gSnap && gSnap.exists()) {
+            const inv = gSnap.val() || {};
+            return {
+                quantity: inv.quantity ?? 0,
+                threshold: inv.threshold ?? 0,
+                unit: inv.unit || 'g',
+                disabled: !!inv.disabled
+            };
+        }
+    } catch (_e2) {}
     return { quantity: 0, threshold: 0, unit: 'g', disabled: false };
 }
 
@@ -2771,8 +2800,15 @@ async function setHerbInventoryForMode(itemId, quantity, threshold, unit, disabl
     if (threshold !== undefined && threshold !== null) data.threshold = Number(threshold);
     if (unit !== undefined && unit !== null) data.unit = unit;
     if (disabled !== undefined && disabled !== null) data.disabled = !!disabled;
+    const clinicId = (function() {
+        try {
+            return localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+        } catch (_e) {
+            return (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default') || 'local-default';
+        }
+    })();
     const path = (mode === 'slice') ? 'herbInventorySlice' : 'herbInventory';
-    const ref = window.firebase.ref(window.firebase.rtdb, path + '/' + String(itemId));
+    const ref = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/' + path + '/' + String(itemId));
     await window.firebase.update(ref, data);
 }
 
