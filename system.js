@@ -23289,14 +23289,15 @@ async function displayMedicalRecords(pageChange = false) {
         `;
     } catch (_e) {}
     const searchInput = document.getElementById('searchMedicalRecord');
-    const term = searchInput && searchInput.value ? searchInput.value.toLowerCase().trim() : '';
+    const rawTerm = searchInput && searchInput.value ? searchInput.value.trim() : '';
+    const term = rawTerm.toLowerCase();
     const itemsPerPage = (paginationSettings.medicalRecordList && paginationSettings.medicalRecordList.itemsPerPage) ? paginationSettings.medicalRecordList.itemsPerPage : medicalRecordPageSize;
     let currentPage = (paginationSettings.medicalRecordList && paginationSettings.medicalRecordList.currentPage) ? paginationSettings.medicalRecordList.currentPage : 1;
     let filtered = [];
     if (term) {
         let res = medicalRecordSearchCache[term] || null;
         if (!Array.isArray(res)) {
-            res = await searchMedicalRecords(term, 50);
+            res = await searchMedicalRecords(rawTerm, 50);
             if (Array.isArray(res)) medicalRecordSearchCache[term] = res;
         }
         medicalRecords = Array.isArray(res) ? res : [];
@@ -23768,6 +23769,44 @@ async function searchMedicalRecords(term, limitCount = 50) {
             );
             const s1 = await window.firebase.getDocs(q1);
             s1.forEach(d => {
+                const id = String(d.id);
+                if (!seen.has(id) && out.length < limitCount) {
+                    out.push({ id: d.id, ...d.data() });
+                    seen.add(id);
+                }
+            });
+        } catch (_e) {}
+        try {
+            const termUpper = (term || '').toUpperCase();
+            if (termUpper && termUpper !== term) {
+                const col = window.firebase.collection(window.firebase.db, 'consultations');
+                const q1u = window.firebase.firestoreQuery(
+                    col,
+                    window.firebase.where('medicalRecordNumber', '==', termUpper),
+                    window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                );
+                const s1u = await window.firebase.getDocs(q1u);
+                s1u.forEach(d => {
+                    const id = String(d.id);
+                    if (!seen.has(id) && out.length < limitCount) {
+                        out.push({ id: d.id, ...d.data() });
+                        seen.add(id);
+                    }
+                });
+            }
+        } catch (_e) {}
+        try {
+            const termUpper = (term || '').toUpperCase();
+            const col = window.firebase.collection(window.firebase.db, 'consultations');
+            const qPref = window.firebase.firestoreQuery(
+                col,
+                window.firebase.orderBy('medicalRecordNumber'),
+                window.firebase.startAt(termUpper),
+                window.firebase.endAt(termUpper + '\uf8ff'),
+                window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+            );
+            const sPref = await window.firebase.getDocs(qPref);
+            sPref.forEach(d => {
                 const id = String(d.id);
                 if (!seen.has(id) && out.length < limitCount) {
                     out.push({ id: d.id, ...d.data() });
