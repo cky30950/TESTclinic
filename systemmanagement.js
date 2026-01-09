@@ -243,6 +243,9 @@ async function exportClinicBackup() {
     setButtonLoading(button);
     try {
         await ensureFirebaseReady();
+        let totalStepsForBackupExport = 5;
+        let stepCount = 0;
+        showBackupProgressBar(totalStepsForBackupExport);
         // 讀取病人、診症記錄與用戶資料
         // 讀取病人與診症資料，並透過 fetchUsers() 取得用戶列表
         const [patientsRes, consultationsRes] = await Promise.all([
@@ -259,6 +262,7 @@ async function exportClinicBackup() {
             })()
         ]);
         const patientsData = patientsRes && patientsRes.success && Array.isArray(patientsRes.data) ? patientsRes.data : [];
+        stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
         // 若診症記錄有多頁，必須依序載入所有頁面。先取得第一頁資料。
         let consultationsData = consultationsRes && consultationsRes.success && Array.isArray(consultationsRes.data) ? consultationsRes.data.slice() : [];
         try {
@@ -277,6 +281,7 @@ async function exportClinicBackup() {
             // 若載入下一頁時發生錯誤，保留已獲得的資料並停止
             console.warn('讀取診症記錄全部頁面失敗，僅匯出部分資料:', _pageErr);
         }
+        stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
         // 取得用戶列表；為確保包含個人設置（personalSettings），直接從 Firestore 讀取
         // 不使用快取中的 trimmed 資料，以便包含所有欄位
         let usersData = [];
@@ -291,11 +296,13 @@ async function exportClinicBackup() {
         } catch (_fetchErr) {
             console.warn('匯出備份時取得用戶列表失敗，將不包含用戶資料');
         }
+        stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
         // 讀取收費項目時強制刷新，避免使用快取中的舊資料。
         if (typeof initBillingItems === 'function') {
             // 強制從 Firestore 重新讀取收費項目，以確保備份內容為最新
             await initBillingItems(true);
         }
+        stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
         // 讀取所有套票資料
         let packageData = [];
         try {
@@ -308,6 +315,7 @@ async function exportClinicBackup() {
             console.error('讀取套票資料失敗:', e);
         }
         const billingData = Array.isArray(billingItems) ? billingItems : [];
+        stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
         // 讀取 Realtime Database 資料，排除即時掛號及診症資料
         let rtdbData = null;
         try {
@@ -320,6 +328,10 @@ async function exportClinicBackup() {
                         rtdbData[key] = allRtdb[key];
                     }
                 }
+            }
+            if (rtdbData) {
+                totalStepsForBackupExport++;
+                stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
             }
         } catch (e) {
             console.warn('讀取 Realtime Database 資料失敗:', e);
@@ -336,6 +348,7 @@ async function exportClinicBackup() {
         if (rtdbData) {
             backup.rtdb = rtdbData;
         }
+        stepCount++; updateBackupProgressBar(stepCount, totalStepsForBackupExport);
         const json = JSON.stringify(backup, null, 2);
         const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -348,9 +361,11 @@ async function exportClinicBackup() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast('備份資料已匯出！', 'success');
+        finishBackupProgressBar(true);
     } catch (error) {
         console.error('匯出備份失敗:', error);
         showToast('匯出備份失敗，請稍後再試', 'error');
+        finishBackupProgressBar(false);
     } finally {
         clearButtonLoading(button);
     }
