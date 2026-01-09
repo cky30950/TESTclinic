@@ -602,7 +602,7 @@
         const createItem = (userObj, isGroup = false) => {
         const item = document.createElement('div');
         item.className = 'flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100';
-        item.dataset.uid = userObj.uid || '';
+        item.dataset.uid = userObj.uid || userObj.id || '';
         // Avatar: first letter
         const avatar = document.createElement('div');
         avatar.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white mr-2 flex-shrink-0';

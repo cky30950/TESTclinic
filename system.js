@@ -4808,18 +4808,37 @@ async function attemptMainLogin() {
         try {
             if (window.ChatModule && typeof window.ChatModule.initChat === 'function') {
                 const cid = localStorage.getItem('currentClinicId') || 'local-default';
-                const filteredUsers = Array.isArray(users) ? users.filter(u => {
-                    if (!u) return false;
-                    const single = u.clinicId || u.assignedClinicId || null;
-                    const multi = Array.isArray(u.clinicIds) ? u.clinicIds : (Array.isArray(u.assignedClinics) ? u.assignedClinics : null);
-                    if (multi) {
-                        return multi.map(String).includes(String(cid));
+                let filteredUsers = Array.isArray(users) ? users.slice() : [];
+                try {
+                    const presSnap = await window.firebase.get(
+                        window.firebase.ref(window.firebase.rtdb, `clinics/${cid}/presence`)
+                    );
+                    const presenceData = presSnap && presSnap.exists() ? presSnap.val() : {};
+                    const onlineKeys = Object.keys(presenceData || {});
+                    if (onlineKeys.length > 0) {
+                        filteredUsers = filteredUsers.filter(u => {
+                            const uid = u && (u.uid || u.id);
+                            if (!uid) return false;
+                            return onlineKeys.includes(String(uid));
+                        });
+                    } else {
+                        filteredUsers = filteredUsers.filter(u => {
+                            const single = u && (u.clinicId || u.assignedClinicId);
+                            const multi = u && (Array.isArray(u.clinicIds) ? u.clinicIds : (Array.isArray(u.assignedClinics) ? u.assignedClinics : null));
+                            if (multi) return multi.map(String).includes(String(cid));
+                            if (single) return String(single) === String(cid);
+                            return true;
+                        });
                     }
-                    if (single) {
-                        return String(single) === String(cid);
-                    }
-                    return String(u.id) === String(currentUserData && currentUserData.id);
-                }) : [];
+                } catch (_ePres) {
+                    filteredUsers = filteredUsers.filter(u => {
+                        const single = u && (u.clinicId || u.assignedClinicId);
+                        const multi = u && (Array.isArray(u.clinicIds) ? u.clinicIds : (Array.isArray(u.assignedClinics) ? u.assignedClinics : null));
+                        if (multi) return multi.map(String).includes(String(cid));
+                        if (single) return String(single) === String(cid);
+                        return true;
+                    });
+                }
                 window.ChatModule.initChat(currentUserData, filteredUsers);
             }
         } catch (chatErr) {
