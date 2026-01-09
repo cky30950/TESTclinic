@@ -4807,7 +4807,20 @@ async function attemptMainLogin() {
         // 初始化聊天模組：在載入系統資料後啟用內部聊天。傳入當前用戶資料與所有用戶清單
         try {
             if (window.ChatModule && typeof window.ChatModule.initChat === 'function') {
-                window.ChatModule.initChat(currentUserData, users);
+                const cid = localStorage.getItem('currentClinicId') || 'local-default';
+                const filteredUsers = Array.isArray(users) ? users.filter(u => {
+                    if (!u) return false;
+                    const single = u.clinicId || u.assignedClinicId || null;
+                    const multi = Array.isArray(u.clinicIds) ? u.clinicIds : (Array.isArray(u.assignedClinics) ? u.assignedClinics : null);
+                    if (multi) {
+                        return multi.map(String).includes(String(cid));
+                    }
+                    if (single) {
+                        return String(single) === String(cid);
+                    }
+                    return String(u.id) === String(currentUserData && currentUserData.id);
+                }) : [];
+                window.ChatModule.initChat(currentUserData, filteredUsers);
             }
         } catch (chatErr) {
             console.error('初始化聊天模組失敗:', chatErr);
