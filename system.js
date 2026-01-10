@@ -23383,7 +23383,7 @@ async function loadMedicalRecordManagement() {
             getConsultationsCount(),
             safeGetPatients(true)
         ]);
-        medicalRecordTotalCount = (countRes && typeof countRes.count === 'number') ? countRes.count : 0;
+        medicalRecordTotalCount = (countRes && typeof countRes.count === 'number') ? countRes.count : null;
         const patients = (patientsRes && patientsRes.success && Array.isArray(patientsRes.data)) ? patientsRes.data : [];
         medicalRecordPatients = {};
         patients.forEach(p => {
@@ -23615,10 +23615,20 @@ async function getConsultationsCount() {
     try {
         await waitForFirebaseDb();
         const colRef = window.firebase.collection(window.firebase.db, 'consultations');
-        const snapshot = await window.firebase.getCountFromServer(colRef);
-        return { count: snapshot.data().count || 0 };
+        const cid = (typeof localStorage !== 'undefined' && localStorage.getItem('currentClinicId')) || (typeof currentClinicId !== 'undefined' ? currentClinicId : null);
+        if (cid && cid !== 'local-default') {
+            const q = window.firebase.firestoreQuery(
+                colRef,
+                window.firebase.where('clinicId', '==', cid)
+            );
+            const snapshot = await window.firebase.getCountFromServer(q);
+            return { count: snapshot.data().count || 0 };
+        } else {
+            const snapshot = await window.firebase.getCountFromServer(colRef);
+            return { count: snapshot.data().count || 0 };
+        }
     } catch (_err) {
-        return { count: 0 };
+        return { count: null };
     }
 }
 
@@ -23629,17 +23639,35 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
             return medicalRecordPageCache[page];
         }
         const colRef = window.firebase.collection(window.firebase.db, 'consultations');
+        const cid = (typeof localStorage !== 'undefined' && localStorage.getItem('currentClinicId')) || (typeof currentClinicId !== 'undefined' ? currentClinicId : null);
         let q;
         const totalItems = typeof medicalRecordTotalCount === 'number' ? medicalRecordTotalCount : null;
         const totalPages = totalItems ? Math.ceil(totalItems / pageSize) : null;
         if (totalPages && page === totalPages) {
             const rem = totalItems % pageSize;
             const lastPageSize = rem === 0 ? pageSize : rem;
-            q = window.firebase.firestoreQuery(
-                colRef,
-                window.firebase.orderBy('date', 'asc'),
-                window.firebase.limit(lastPageSize)
-            );
+            try {
+                if (cid && cid !== 'local-default') {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.where('clinicId', '==', cid),
+                        window.firebase.orderBy('date', 'asc'),
+                        window.firebase.limit(lastPageSize)
+                    );
+                } else {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.orderBy('date', 'asc'),
+                        window.firebase.limit(lastPageSize)
+                    );
+                }
+            } catch (_qErrLastAsc) {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.orderBy('date', 'asc'),
+                    window.firebase.limit(lastPageSize)
+                );
+            }
             const snapLast = await window.firebase.getDocs(q);
             const arrLast = [];
             snapLast.forEach(d => arrLast.push({ id: d.id, ...d.data() }));
@@ -23652,15 +23680,41 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
                     return tB - tA;
                 });
             } catch (_e) {}
+            if (cid && cid !== 'local-default') {
+                try {
+                    for (let i = arrLast.length - 1; i >= 0; i--) {
+                        if (String(arrLast[i].clinicId || '') !== String(cid)) {
+                            arrLast.splice(i, 1);
+                        }
+                    }
+                } catch (_fErrLast) {}
+            }
             medicalRecordPageCache[page] = arrLast;
             return arrLast;
         }
         if (page === 1) {
-            q = window.firebase.firestoreQuery(
-                colRef,
-                window.firebase.orderBy('date', 'desc'),
-                window.firebase.limit(pageSize)
-            );
+            try {
+                if (cid && cid !== 'local-default') {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.where('clinicId', '==', cid),
+                        window.firebase.orderBy('date', 'desc'),
+                        window.firebase.limit(pageSize)
+                    );
+                } else {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.orderBy('date', 'desc'),
+                        window.firebase.limit(pageSize)
+                    );
+                }
+            } catch (_qErrFirst) {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.orderBy('date', 'desc'),
+                    window.firebase.limit(pageSize)
+                );
+            }
             const snap = await window.firebase.getDocs(q);
             const arr = [];
             snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
@@ -23689,6 +23743,15 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
                     return tB - tA;
                 });
             } catch (_e) {}
+            if (cid && cid !== 'local-default') {
+                try {
+                    for (let i = arr.length - 1; i >= 0; i--) {
+                        if (String(arr[i].clinicId || '') !== String(cid)) {
+                            arr.splice(i, 1);
+                        }
+                    }
+                } catch (_fErrFirst) {}
+            }
             medicalRecordPageCache[1] = arr;
             medicalRecordPageCursors[1] = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
             return arr;
@@ -23707,12 +23770,31 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
             medicalRecordPageCursors[page] = null;
             return [];
         }
-        q = window.firebase.firestoreQuery(
-            colRef,
-            window.firebase.orderBy('date', 'desc'),
-            window.firebase.startAfter(last),
-            window.firebase.limit(pageSize)
-        );
+        try {
+            if (cid && cid !== 'local-default') {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.where('clinicId', '==', cid),
+                    window.firebase.orderBy('date', 'desc'),
+                    window.firebase.startAfter(last),
+                    window.firebase.limit(pageSize)
+                );
+            } else {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.orderBy('date', 'desc'),
+                    window.firebase.startAfter(last),
+                    window.firebase.limit(pageSize)
+                );
+            }
+        } catch (_qErrNext) {
+            q = window.firebase.firestoreQuery(
+                colRef,
+                window.firebase.orderBy('date', 'desc'),
+                window.firebase.startAfter(last),
+                window.firebase.limit(pageSize)
+            );
+        }
         const snap2 = await window.firebase.getDocs(q);
         const arr2 = [];
         snap2.forEach(d => arr2.push({ id: d.id, ...d.data() }));
@@ -23741,6 +23823,15 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
                 return tB - tA;
             });
         } catch (_e) {}
+        if (cid && cid !== 'local-default') {
+            try {
+                for (let i = arr2.length - 1; i >= 0; i--) {
+                    if (String(arr2[i].clinicId || '') !== String(cid)) {
+                        arr2.splice(i, 1);
+                    }
+                }
+            } catch (_fErrNext) {}
+        }
         medicalRecordPageCache[page] = arr2;
         medicalRecordPageCursors[page] = snap2.docs.length ? snap2.docs[snap2.docs.length - 1] : medicalRecordPageCursors[prevPage];
         return arr2;
@@ -23756,13 +23847,31 @@ async function fetchMedicalRecordPageAsc(ascIndex = 1, pageSize = 10) {
             return medicalRecordAscPageCache[ascIndex];
         }
         const colRef = window.firebase.collection(window.firebase.db, 'consultations');
+        const cid = (typeof localStorage !== 'undefined' && localStorage.getItem('currentClinicId')) || (typeof currentClinicId !== 'undefined' ? currentClinicId : null);
         let q;
         if (ascIndex === 1) {
-            q = window.firebase.firestoreQuery(
-                colRef,
-                window.firebase.orderBy('date', 'asc'),
-                window.firebase.limit(pageSize)
-            );
+            try {
+                if (cid && cid !== 'local-default') {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.where('clinicId', '==', cid),
+                        window.firebase.orderBy('date', 'asc'),
+                        window.firebase.limit(pageSize)
+                    );
+                } else {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.orderBy('date', 'asc'),
+                        window.firebase.limit(pageSize)
+                    );
+                }
+            } catch (_qErrAscFirst) {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.orderBy('date', 'asc'),
+                    window.firebase.limit(pageSize)
+                );
+            }
             const snap = await window.firebase.getDocs(q);
             const arr = [];
             snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
@@ -23791,6 +23900,15 @@ async function fetchMedicalRecordPageAsc(ascIndex = 1, pageSize = 10) {
                     return tB - tA;
                 });
             } catch (_e) {}
+            if (cid && cid !== 'local-default') {
+                try {
+                    for (let i = arr.length - 1; i >= 0; i--) {
+                        if (String(arr[i].clinicId || '') !== String(cid)) {
+                            arr.splice(i, 1);
+                        }
+                    }
+                } catch (_fErrAscFirst) {}
+            }
             medicalRecordAscPageCache[1] = arr;
             medicalRecordAscPageCursors[1] = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
             return arr;
@@ -23808,12 +23926,31 @@ async function fetchMedicalRecordPageAsc(ascIndex = 1, pageSize = 10) {
             medicalRecordAscPageCursors[ascIndex] = null;
             return [];
         }
-        q = window.firebase.firestoreQuery(
-            colRef,
-            window.firebase.orderBy('date', 'asc'),
-            window.firebase.startAfter(last),
-            window.firebase.limit(pageSize)
-        );
+        try {
+            if (cid && cid !== 'local-default') {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.where('clinicId', '==', cid),
+                    window.firebase.orderBy('date', 'asc'),
+                    window.firebase.startAfter(last),
+                    window.firebase.limit(pageSize)
+                );
+            } else {
+                q = window.firebase.firestoreQuery(
+                    colRef,
+                    window.firebase.orderBy('date', 'asc'),
+                    window.firebase.startAfter(last),
+                    window.firebase.limit(pageSize)
+                );
+            }
+        } catch (_qErrAscNext) {
+            q = window.firebase.firestoreQuery(
+                colRef,
+                window.firebase.orderBy('date', 'asc'),
+                window.firebase.startAfter(last),
+                window.firebase.limit(pageSize)
+            );
+        }
         const snap2 = await window.firebase.getDocs(q);
         const arr2 = [];
         snap2.forEach(d => arr2.push({ id: d.id, ...d.data() }));
@@ -23842,6 +23979,15 @@ async function fetchMedicalRecordPageAsc(ascIndex = 1, pageSize = 10) {
                 return tB - tA;
             });
         } catch (_e) {}
+        if (cid && cid !== 'local-default') {
+            try {
+                for (let i = arr2.length - 1; i >= 0; i--) {
+                    if (String(arr2[i].clinicId || '') !== String(cid)) {
+                        arr2.splice(i, 1);
+                    }
+                }
+            } catch (_fErrAscNext) {}
+        }
         medicalRecordAscPageCache[ascIndex] = arr2;
         medicalRecordAscPageCursors[ascIndex] = snap2.docs.length ? snap2.docs[snap2.docs.length - 1] : medicalRecordAscPageCursors[prev];
         return arr2;
@@ -23876,28 +24022,52 @@ async function searchMedicalRecords(term, limitCount = 50) {
         const seen = new Set();
         const out = [];
         if (!lc) return out;
+        const cid = (typeof localStorage !== 'undefined' && localStorage.getItem('currentClinicId')) || (typeof currentClinicId !== 'undefined' ? currentClinicId : null);
         try {
             const dref = window.firebase.doc(window.firebase.db, 'consultations', lc);
             const dsnap = await window.firebase.getDoc(dref);
             if (dsnap && dsnap.exists()) {
                 const rec = { id: dsnap.id, ...dsnap.data() };
-                out.push(rec);
-                seen.add(String(rec.id));
+                if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                    out.push(rec);
+                    seen.add(String(rec.id));
+                }
             }
         } catch (_e) {}
         try {
             const col = window.firebase.collection(window.firebase.db, 'consultations');
-            const q1 = window.firebase.firestoreQuery(
-                col,
-                window.firebase.where('medicalRecordNumber', '==', term),
-                window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
-            );
+            let q1;
+            try {
+                if (cid && cid !== 'local-default') {
+                    q1 = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('clinicId', '==', cid),
+                        window.firebase.where('medicalRecordNumber', '==', term),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                } else {
+                    q1 = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('medicalRecordNumber', '==', term),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                }
+            } catch (_qErr1) {
+                q1 = window.firebase.firestoreQuery(
+                    col,
+                    window.firebase.where('medicalRecordNumber', '==', term),
+                    window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                );
+            }
             const s1 = await window.firebase.getDocs(q1);
             s1.forEach(d => {
                 const id = String(d.id);
                 if (!seen.has(id) && out.length < limitCount) {
-                    out.push({ id: d.id, ...d.data() });
-                    seen.add(id);
+                    const rec = { id: d.id, ...d.data() };
+                    if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                        out.push(rec);
+                        seen.add(id);
+                    }
                 }
             });
         } catch (_e) {}
@@ -23905,17 +24075,38 @@ async function searchMedicalRecords(term, limitCount = 50) {
             const termUpper = (term || '').toUpperCase();
             if (termUpper && termUpper !== term) {
                 const col = window.firebase.collection(window.firebase.db, 'consultations');
-                const q1u = window.firebase.firestoreQuery(
-                    col,
-                    window.firebase.where('medicalRecordNumber', '==', termUpper),
-                    window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
-                );
+                let q1u;
+                try {
+                    if (cid && cid !== 'local-default') {
+                        q1u = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('clinicId', '==', cid),
+                            window.firebase.where('medicalRecordNumber', '==', termUpper),
+                            window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                        );
+                    } else {
+                        q1u = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('medicalRecordNumber', '==', termUpper),
+                            window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                        );
+                    }
+                } catch (_qErr1u) {
+                    q1u = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('medicalRecordNumber', '==', termUpper),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                }
                 const s1u = await window.firebase.getDocs(q1u);
                 s1u.forEach(d => {
                     const id = String(d.id);
                     if (!seen.has(id) && out.length < limitCount) {
-                        out.push({ id: d.id, ...d.data() });
-                        seen.add(id);
+                        const rec = { id: d.id, ...d.data() };
+                        if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                            out.push(rec);
+                            seen.add(id);
+                        }
                     }
                 });
             }
@@ -23923,37 +24114,87 @@ async function searchMedicalRecords(term, limitCount = 50) {
         try {
             const termUpper = (term || '').toUpperCase();
             const col = window.firebase.collection(window.firebase.db, 'consultations');
-            const qPref = window.firebase.firestoreQuery(
-                col,
-                window.firebase.orderBy('medicalRecordNumber', 'asc'),
-                window.firebase.startAt(termUpper),
-                window.firebase.endAt(termUpper + '\uf8ff'),
-                window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
-            );
+            let qPref;
+            try {
+                if (cid && cid !== 'local-default') {
+                    qPref = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('clinicId', '==', cid),
+                        window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                        window.firebase.startAt(termUpper),
+                        window.firebase.endAt(termUpper + '\uf8ff'),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                } else {
+                    qPref = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                        window.firebase.startAt(termUpper),
+                        window.firebase.endAt(termUpper + '\uf8ff'),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                }
+            } catch (_qErrPref) {
+                qPref = window.firebase.firestoreQuery(
+                    col,
+                    window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                    window.firebase.startAt(termUpper),
+                    window.firebase.endAt(termUpper + '\uf8ff'),
+                    window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                );
+            }
             const sPref = await window.firebase.getDocs(qPref);
             sPref.forEach(d => {
                 const id = String(d.id);
                 if (!seen.has(id) && out.length < limitCount) {
-                    out.push({ id: d.id, ...d.data() });
-                    seen.add(id);
+                    const rec = { id: d.id, ...d.data() };
+                    if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                        out.push(rec);
+                        seen.add(id);
+                    }
                 }
             });
         } catch (_e) {}
         try {
             const col = window.firebase.collection(window.firebase.db, 'consultations');
-            const qPrefRaw = window.firebase.firestoreQuery(
-                col,
-                window.firebase.orderBy('medicalRecordNumber', 'asc'),
-                window.firebase.startAt(term),
-                window.firebase.endAt(term + '\uf8ff'),
-                window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
-            );
+            let qPrefRaw;
+            try {
+                if (cid && cid !== 'local-default') {
+                    qPrefRaw = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('clinicId', '==', cid),
+                        window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                        window.firebase.startAt(term),
+                        window.firebase.endAt(term + '\uf8ff'),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                } else {
+                    qPrefRaw = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                        window.firebase.startAt(term),
+                        window.firebase.endAt(term + '\uf8ff'),
+                        window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                    );
+                }
+            } catch (_qErrPrefRaw) {
+                qPrefRaw = window.firebase.firestoreQuery(
+                    col,
+                    window.firebase.orderBy('medicalRecordNumber', 'asc'),
+                    window.firebase.startAt(term),
+                    window.firebase.endAt(term + '\uf8ff'),
+                    window.firebase.limit(Math.max(1, Math.min(20, limitCount)))
+                );
+            }
             const sPrefRaw = await window.firebase.getDocs(qPrefRaw);
             sPrefRaw.forEach(d => {
                 const id = String(d.id);
                 if (!seen.has(id) && out.length < limitCount) {
-                    out.push({ id: d.id, ...d.data() });
-                    seen.add(id);
+                    const rec = { id: d.id, ...d.data() };
+                    if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                        out.push(rec);
+                        seen.add(id);
+                    }
                 }
             });
         } catch (_e) {}
@@ -23970,17 +24211,38 @@ async function searchMedicalRecords(term, limitCount = 50) {
             if (out.length >= limitCount) break;
             try {
                 const col = window.firebase.collection(window.firebase.db, 'consultations');
-                const q2 = window.firebase.firestoreQuery(
-                    col,
-                    window.firebase.where('patientId', '==', pid),
-                    window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
-                );
+                let q2;
+                try {
+                    if (cid && cid !== 'local-default') {
+                        q2 = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('clinicId', '==', cid),
+                            window.firebase.where('patientId', '==', pid),
+                            window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                        );
+                    } else {
+                        q2 = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('patientId', '==', pid),
+                            window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                        );
+                    }
+                } catch (_qErr2) {
+                    q2 = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('patientId', '==', pid),
+                        window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                    );
+                }
                 const s2 = await window.firebase.getDocs(q2);
                 s2.forEach(d => {
                     const id = String(d.id);
                     if (!seen.has(id) && out.length < limitCount) {
-                        out.push({ id: d.id, ...d.data() });
-                        seen.add(id);
+                        const rec = { id: d.id, ...d.data() };
+                        if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                            out.push(rec);
+                            seen.add(id);
+                        }
                     }
                 });
             } catch (_e) {}
@@ -24009,32 +24271,74 @@ async function searchMedicalRecords(term, limitCount = 50) {
             try {
                 const col = window.firebase.collection(window.firebase.db, 'consultations');
                 // doctor 可能是字串 username
-                const qA = window.firebase.firestoreQuery(
-                    col,
-                    window.firebase.where('doctor', '==', uname),
-                    window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
-                );
+                let qA;
+                try {
+                    if (cid && cid !== 'local-default') {
+                        qA = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('clinicId', '==', cid),
+                            window.firebase.where('doctor', '==', uname),
+                            window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                        );
+                    } else {
+                        qA = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('doctor', '==', uname),
+                            window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                        );
+                    }
+                } catch (_qErrA) {
+                    qA = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('doctor', '==', uname),
+                        window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                    );
+                }
                 const sA = await window.firebase.getDocs(qA);
                 sA.forEach(d => {
                     const id = String(d.id);
                     if (!seen.has(id) && out.length < limitCount) {
-                        out.push({ id: d.id, ...d.data() });
-                        seen.add(id);
+                        const rec = { id: d.id, ...d.data() };
+                        if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                            out.push(rec);
+                            seen.add(id);
+                        }
                     }
                 });
                 if (out.length >= limitCount) break;
                 // 或 doctor 為物件，取其中 username
-                const qB = window.firebase.firestoreQuery(
-                    col,
-                    window.firebase.where('doctor.username', '==', uname),
-                    window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
-                );
+                let qB;
+                try {
+                    if (cid && cid !== 'local-default') {
+                        qB = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('clinicId', '==', cid),
+                            window.firebase.where('doctor.username', '==', uname),
+                            window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                        );
+                    } else {
+                        qB = window.firebase.firestoreQuery(
+                            col,
+                            window.firebase.where('doctor.username', '==', uname),
+                            window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                        );
+                    }
+                } catch (_qErrB) {
+                    qB = window.firebase.firestoreQuery(
+                        col,
+                        window.firebase.where('doctor.username', '==', uname),
+                        window.firebase.limit(Math.max(1, Math.min(10, limitCount - out.length)))
+                    );
+                }
                 const sB = await window.firebase.getDocs(qB);
                 sB.forEach(d => {
                     const id = String(d.id);
                     if (!seen.has(id) && out.length < limitCount) {
-                        out.push({ id: d.id, ...d.data() });
-                        seen.add(id);
+                        const rec = { id: d.id, ...d.data() };
+                        if (!cid || cid === 'local-default' || String(rec.clinicId || '') === String(cid)) {
+                            out.push(rec);
+                            seen.add(id);
+                        }
                     }
                 });
             } catch (_e) {}
