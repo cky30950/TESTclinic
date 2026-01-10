@@ -101,7 +101,7 @@ function normalizeText(s) {
 }
 
 function filterByClinic(list, clinicId, clinicName) {
-    if (!clinicId || clinicId === 'ALL') return list || [];
+    if (!clinicId || clinicId === 'ALL') return (list || []).filter(it => normalizeText(it.clinicId || '') !== 'local-default');
     const idNorm = normalizeText(clinicId);
     const nameNorm = normalizeText(clinicName);
     return (list || []).filter(it => {
@@ -445,7 +445,7 @@ function readClinicsForPersonalStats() {
         const s = localStorage.getItem('clinics');
         const arr = s ? JSON.parse(s) : [];
         if (!Array.isArray(arr)) return [];
-        return arr.map(c => ({
+        return arr.filter(c => normalizeText(c && c.id ? c.id : '') !== 'local-default').map(c => ({
             id: c && c.id ? c.id : '',
             name: (c && (c.chineseName || c.englishName)) ? (c.chineseName || c.englishName) : (c && c.id ? c.id : '')
         }));
