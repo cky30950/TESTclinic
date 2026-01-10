@@ -1916,6 +1916,13 @@ async function fetchUsers(forceRefresh = false) {
             try { if (typeof displayHerbLibrary === 'function') displayHerbLibrary(); } catch (_eDisp) {}
             try { if (typeof displayBillingItems === 'function') displayBillingItems(); } catch (_e6) {}
             advanceGlobalLoading();
+            try {
+                const modal = document.getElementById('inventoryHistoryModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    try { loadInventoryHistory('in'); } catch (_ei) {}
+                    try { loadInventoryHistory('out'); } catch (_eo) {}
+                }
+            } catch (_eInvHist) {}
             hideGlobalLoading();
         }
         function updateCurrentClinicDisplay() {
@@ -3871,21 +3878,23 @@ async function recordInventoryHistory(type, entries, extra = {}) {
             if (type === 'out' && extra && extra.consultationId) {
                 if (extra.replaceExistingForConsultation) {
                     try {
-                        const baseRef = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out');
+                        const clinicId = localStorage.getItem('currentClinicId') || currentClinicId || 'local-default';
+                        const baseRef = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/out');
                         let snap = null;
                         try { snap = await window.firebase.get(baseRef); } catch (_e) { snap = null; }
                         const obj = snap && snap.exists() ? snap.val() || {} : {};
                         for (const k in obj) {
                             const rec = obj[k] || {};
                             if (String(rec.consultationId || '') === String(extra.consultationId)) {
-                                const child = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out/' + String(k));
+                                const child = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/out/' + String(k));
                                 await window.firebase.set(child, null);
                             }
                         }
                     } catch (_e) {}
                 } else if (arr.length) {
                     try {
-                        const baseRef = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out');
+                        const clinicId = localStorage.getItem('currentClinicId') || currentClinicId || 'local-default';
+                        const baseRef = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/out');
                         const q = window.firebase.query(baseRef, window.firebase.orderByChild('timestamp'), window.firebase.limitToLast(50));
                         let snap = null;
                         try { snap = await window.firebase.get(q); } catch (_e) { snap = null; }
@@ -3907,7 +3916,8 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                 }
             }
             const ts = Date.now();
-            const ref = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/' + String(type) + '/' + String(ts));
+            const clinicId = localStorage.getItem('currentClinicId') || currentClinicId || 'local-default';
+            const ref = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/' + String(type) + '/' + String(ts));
             const data = { timestamp: ts, entries: arr };
             for (const k in extra) { data[k] = extra[k]; }
             await window.firebase.set(ref, data);
@@ -3917,7 +3927,8 @@ async function recordInventoryHistory(type, entries, extra = {}) {
             if (!consultationId) return null;
             await waitForFirebaseDb();
             try {
-                const baseRef = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out');
+                const clinicId = localStorage.getItem('currentClinicId') || currentClinicId || 'local-default';
+                const baseRef = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/out');
                 const q = window.firebase.query(baseRef, window.firebase.orderByChild('consultationId'), window.firebase.equalTo(String(consultationId)));
                 const snap = await window.firebase.get(q);
                 if (!snap || !snap.exists()) return null;
@@ -4026,7 +4037,8 @@ async function recordInventoryHistory(type, entries, extra = {}) {
             if (!container) return;
             container.innerHTML = '';
             try {
-                const baseRef = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/' + String(type));
+                const clinicId = localStorage.getItem('currentClinicId') || currentClinicId || 'local-default';
+                const baseRef = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/' + String(type));
                 const q = window.firebase.query(baseRef, window.firebase.orderByChild('timestamp'), window.firebase.limitToLast(20));
                 let snap = null;
                 try { snap = await window.firebase.get(q); } catch (_qe) { snap = null; }
@@ -4036,6 +4048,13 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                         const snap2 = await window.firebase.get(baseRef);
                         obj = snap2 && snap2.exists() ? snap2.val() || {} : {};
                     } catch (_fe) {}
+                    if (!obj || Object.keys(obj).length === 0) {
+                        try {
+                            const globalRef = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/' + String(type));
+                            const snapGlobal = await window.firebase.get(globalRef);
+                            obj = snapGlobal && snapGlobal.exists() ? snapGlobal.val() || {} : {};
+                        } catch (_fg) {}
+                    }
                 }
                 const keys = Object.keys(obj).sort((a, b) => Number(b) - Number(a)).slice(0, 20);
                 for (const k of keys) {
@@ -4108,7 +4127,8 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                         const extraTag = missing ? '，<span class="text-red-600">已退回</span>' : '';
                         let locText = '';
                         try {
-                            const baseRef3 = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out');
+                            const clinicId = localStorage.getItem('currentClinicId') || currentClinicId || 'local-default';
+                            const baseRef3 = window.firebase.ref(window.firebase.rtdb, 'clinics/' + String(clinicId) + '/inventoryHistory/out');
                             const q3 = window.firebase.query(baseRef3, window.firebase.orderByChild('consultationId'), window.firebase.equalTo(String(cid)));
                             let snap3 = null;
                             try { snap3 = await window.firebase.get(q3); } catch (_e3) { snap3 = null; }
@@ -4129,6 +4149,31 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                                         locText = '，入庫位置：混合';
                                     }
                                 }
+                            } else {
+                                try {
+                                    const globalRef3 = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out');
+                                    const q3g = window.firebase.query(globalRef3, window.firebase.orderByChild('consultationId'), window.firebase.equalTo(String(cid)));
+                                    let snap3g = null;
+                                    try { snap3g = await window.firebase.get(q3g); } catch (_e3g) { snap3g = null; }
+                                    if (snap3g && snap3g.exists()) {
+                                        const obj3g = snap3g.val() || {};
+                                        let latestRecG = null;
+                                        for (const kk in obj3g) {
+                                            const rr = obj3g[kk] || {};
+                                            if (!Array.isArray(rr.entries)) continue;
+                                            if (!latestRecG || Number(rr.timestamp || 0) > Number(latestRecG.timestamp || 0)) latestRecG = rr;
+                                        }
+                                        if (latestRecG && Array.isArray(latestRecG.entries)) {
+                                            const modes = new Set(latestRecG.entries.map(e => e && e.mode).filter(m => m === 'slice' || m === 'granule'));
+                                            if (modes.size === 1) {
+                                                const m = Array.from(modes)[0];
+                                                locText = '，入庫位置：' + (m === 'slice' ? '飲片' : '顆粒沖劑');
+                                            } else if (modes.size > 1) {
+                                                locText = '，入庫位置：混合';
+                                            }
+                                        }
+                                    }
+                                } catch (_eLocG) {}
                             }
                         } catch (_eLoc) {}
                         div.innerHTML = '<div class="text-sm text-gray-600">舊出庫記錄（病歷編號：' + mrn + locText + extraTag + '）</div>' +
