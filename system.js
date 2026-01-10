@@ -16796,7 +16796,7 @@ async function searchBillingForConsultation() {
                 }
                 // 取得最近一次診症記錄
                 const lastConsultation = patientConsultations.length > 0 ? patientConsultations[0] : null;
-                if (!lastConsultation || !lastConsultation.prescription) {
+                if (!lastConsultation || (!lastConsultation.multiPrescriptions && !lastConsultation.prescription)) {
                     {
                         const lang = localStorage.getItem('lang') || 'zh';
                         const zhMsg = `${patient.name} 沒有上次處方記錄可載入`;
@@ -16808,8 +16808,37 @@ async function searchBillingForConsultation() {
                 }
                 // 清空並解析處方
                 clearActivePrescriptionItems();
-                parsePrescriptionToItems(lastConsultation.prescription);
-                updatePrescriptionDisplay();
+                let usedMulti = false;
+                try {
+                    if (lastConsultation.multiPrescriptions) {
+                        const mp = JSON.parse(lastConsultation.multiPrescriptions);
+                        if (Array.isArray(mp) && mp.length > 0) {
+                            prescriptions = mp.map(sec => {
+                                const name = sec && sec.name ? sec.name : '處方';
+                                const items = Array.isArray(sec && sec.items) ? sec.items : [];
+                                const days = parseInt(sec && sec.days) || 5;
+                                const freq = parseInt(sec && sec.freq) || 2;
+                                const mode = (sec && sec.mode) === 'slice' ? 'slice' : 'granule';
+                                return { name, items, days, freq, mode };
+                            });
+                            activePrescriptionIndex = 0;
+                            selectedPrescriptionItems = prescriptions[activePrescriptionIndex].items;
+                            try {
+                                const m = prescriptions[activePrescriptionIndex] && prescriptions[activePrescriptionIndex].mode ? prescriptions[activePrescriptionIndex].mode : 'granule';
+                                if (m === 'granule' || m === 'slice') {
+                                    changeInventoryType(m);
+                                }
+                            } catch (_e) {}
+                            updatePrescriptionDisplay();
+                            try { updateMedicineFeeByDays(getTotalMedicationDays()); } catch (_e) {}
+                            usedMulti = true;
+                        }
+                    }
+                } catch (_e) {}
+                if (!usedMulti) {
+                    parsePrescriptionToItems(lastConsultation.prescription);
+                    updatePrescriptionDisplay();
+                }
                 try {
                     const daysEl = document.getElementById('medicationDays');
                     const freqEl = document.getElementById('medicationFrequency');
@@ -17283,18 +17312,46 @@ const consultationDate = (() => {
             }
             
             // 載入處方內容
-            clearActivePrescriptionItems();
-            // 先嘗試從結構化處方資料重建
             let prescriptionLoaded = false;
-            if (consultation.prescriptionStructured) {
+            if (consultation.multiPrescriptions) {
                 try {
-                    const parsedItems = JSON.parse(consultation.prescriptionStructured);
-                    if (Array.isArray(parsedItems) && parsedItems.length > 0) {
-                        setActivePrescriptionItems(parsedItems);
+                    const mp = JSON.parse(consultation.multiPrescriptions);
+                    if (Array.isArray(mp) && mp.length > 0) {
+                        prescriptions = mp.map(sec => {
+                            const name = sec && sec.name ? sec.name : '處方';
+                            const items = Array.isArray(sec && sec.items) ? sec.items : [];
+                            const days = parseInt(sec && sec.days) || 5;
+                            const freq = parseInt(sec && sec.freq) || 2;
+                            const mode = (sec && sec.mode) === 'slice' ? 'slice' : 'granule';
+                            return { name, items, days, freq, mode };
+                        });
+                        activePrescriptionIndex = 0;
+                        selectedPrescriptionItems = prescriptions[activePrescriptionIndex].items;
+                        try {
+                            const m = prescriptions[activePrescriptionIndex] && prescriptions[activePrescriptionIndex].mode ? prescriptions[activePrescriptionIndex].mode : 'granule';
+                            if (m === 'granule' || m === 'slice') {
+                                changeInventoryType(m);
+                            }
+                        } catch (_e) {}
+                        updatePrescriptionDisplay();
                         prescriptionLoaded = true;
                     }
                 } catch (_e) {
                     prescriptionLoaded = false;
+                }
+            }
+            if (!prescriptionLoaded) {
+                clearActivePrescriptionItems();
+                if (consultation.prescriptionStructured) {
+                    try {
+                        const parsedItems = JSON.parse(consultation.prescriptionStructured);
+                        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+                            setActivePrescriptionItems(parsedItems);
+                            prescriptionLoaded = true;
+                        }
+                    } catch (_e) {
+                        prescriptionLoaded = false;
+                    }
                 }
             }
             if (prescriptionLoaded) {
