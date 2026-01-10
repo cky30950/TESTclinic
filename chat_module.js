@@ -140,7 +140,6 @@
         return;
       }
       this.currentUser = userData;
-      this.clinicId = localStorage.getItem('currentClinicId') || 'local-default';
       this.initialized = true;
       // Store users list if provided; fallback to global if available
       if (usersList && Array.isArray(usersList)) {
@@ -539,7 +538,8 @@
      */
     setupPresence() {
       try {
-        this.presenceRef = window.firebase.ref(window.firebase.rtdb, `clinics/${this.clinicId}/presence/${this.currentUserUid}`);
+        // Each user has its own presence entry under presence/<uid>
+        this.presenceRef = window.firebase.ref(window.firebase.rtdb, `presence/${this.currentUserUid}`);
         // Monitor connection status via the special .info/connected path. When the client
         // transitions from offline to online, re-apply the onDisconnect handler and
         // set presence to online. Without this, the presence may remain offline
@@ -602,7 +602,7 @@
         const createItem = (userObj, isGroup = false) => {
         const item = document.createElement('div');
         item.className = 'flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100';
-        item.dataset.uid = userObj.uid || userObj.id || '';
+        item.dataset.uid = userObj.uid || '';
         // Avatar: first letter
         const avatar = document.createElement('div');
         avatar.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white mr-2 flex-shrink-0';
@@ -684,7 +684,7 @@
      */
     listenToPresence() {
       try {
-        this.presenceRootRef = window.firebase.ref(window.firebase.rtdb, `clinics/${this.clinicId}/presence`);
+        this.presenceRootRef = window.firebase.ref(window.firebase.rtdb, 'presence');
         this.presenceListener = (snapshot) => {
           const presenceData = snapshot.val() || {};
           // Count online users excluding current (for potential use)
@@ -813,9 +813,9 @@
       // Determine path for the new channel
       let path;
       if (channelId === 'public') {
-        path = `clinics/${this.clinicId}/chat/messages/public`;
+        path = 'chat/messages/public';
       } else {
-        path = `clinics/${this.clinicId}/chat/private/${channelId}`;
+        path = `chat/private/${channelId}`;
       }
       // 取出最後 100 筆訊息，以降低讀取量。若訊息較少則會全部返回
       const baseRef = window.firebase.ref(window.firebase.rtdb, path);
@@ -1000,9 +1000,9 @@
       };
       let path;
       if (this.currentChannel === 'public') {
-        path = `clinics/${this.clinicId}/chat/messages/public`;
+        path = 'chat/messages/public';
       } else if (this.privateChatId) {
-        path = `clinics/${this.clinicId}/chat/private/${this.privateChatId}`;
+        path = `chat/private/${this.privateChatId}`;
       } else {
         return;
       }
@@ -1058,7 +1058,7 @@
       this.channelListeners = {};
       // Always watch the public chat
       try {
-        const publicRef = window.firebase.ref(window.firebase.rtdb, `clinics/${this.clinicId}/chat/messages/public`);
+        const publicRef = window.firebase.ref(window.firebase.rtdb, 'chat/messages/public');
         // 使用 limitToLast(1) 查詢只監聽最後一則訊息，減少讀取量
         const publicQuery = window.firebase.query(publicRef, window.firebase.orderByChild('timestamp'), window.firebase.limitToLast(1));
         const publicCallback = (snapshot) => {
@@ -1103,7 +1103,7 @@
           // Skip current user
           if (String(uid) === String(this.currentUserUid) || String(uid) === String(this.currentUser && this.currentUser.id)) return;
           const chatId = [String(this.currentUserUid), String(uid)].sort().join('_');
-          const path = `clinics/${this.clinicId}/chat/private/${chatId}`;
+          const path = `chat/private/${chatId}`;
           const baseRef = window.firebase.ref(window.firebase.rtdb, path);
           // 查詢最後一則訊息
           const q = window.firebase.query(baseRef, window.firebase.orderByChild('timestamp'), window.firebase.limitToLast(1));
@@ -1498,7 +1498,7 @@
         const set = window.firebase && window.firebase.set;
         const update = window.firebase && window.firebase.update;
         if (rtdb && ref && (set || update)) {
-          const path = `clinics/${this.clinicId}/chat/lastSeen/${this.currentUserUid}`;
+          const path = `chat/lastSeen/${this.currentUserUid}`;
           const lastSeenRef = ref(rtdb, path);
           const payload = this.lastSeenTime || {};
           if (set) {
@@ -1591,7 +1591,7 @@
         if (!rtdb || !ref || !get) {
           return Promise.resolve();
         }
-        const path = `clinics/${this.clinicId}/chat/lastSeen/${this.currentUserUid}`;
+        const path = `chat/lastSeen/${this.currentUserUid}`;
         const lastSeenRef = ref(rtdb, path);
         return get(lastSeenRef).then((snapshot) => {
           const remoteData = snapshot && snapshot.exists() ? snapshot.val() : {};

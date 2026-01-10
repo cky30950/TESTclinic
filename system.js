@@ -4807,39 +4807,7 @@ async function attemptMainLogin() {
         // 初始化聊天模組：在載入系統資料後啟用內部聊天。傳入當前用戶資料與所有用戶清單
         try {
             if (window.ChatModule && typeof window.ChatModule.initChat === 'function') {
-                const cid = localStorage.getItem('currentClinicId') || 'local-default';
-                let filteredUsers = Array.isArray(users) ? users.slice() : [];
-                try {
-                    const presSnap = await window.firebase.get(
-                        window.firebase.ref(window.firebase.rtdb, `clinics/${cid}/presence`)
-                    );
-                    const presenceData = presSnap && presSnap.exists() ? presSnap.val() : {};
-                    const onlineKeys = Object.keys(presenceData || {});
-                    if (onlineKeys.length > 0) {
-                        filteredUsers = filteredUsers.filter(u => {
-                            const uid = u && (u.uid || u.id);
-                            if (!uid) return false;
-                            return onlineKeys.includes(String(uid));
-                        });
-                    } else {
-                        filteredUsers = filteredUsers.filter(u => {
-                            const single = u && (u.clinicId || u.assignedClinicId);
-                            const multi = u && (Array.isArray(u.clinicIds) ? u.clinicIds : (Array.isArray(u.assignedClinics) ? u.assignedClinics : null));
-                            if (multi) return multi.map(String).includes(String(cid));
-                            if (single) return String(single) === String(cid);
-                            return true;
-                        });
-                    }
-                } catch (_ePres) {
-                    filteredUsers = filteredUsers.filter(u => {
-                        const single = u && (u.clinicId || u.assignedClinicId);
-                        const multi = u && (Array.isArray(u.clinicIds) ? u.clinicIds : (Array.isArray(u.assignedClinics) ? u.assignedClinics : null));
-                        if (multi) return multi.map(String).includes(String(cid));
-                        if (single) return String(single) === String(cid);
-                        return true;
-                    });
-                }
-                window.ChatModule.initChat(currentUserData, filteredUsers);
+                window.ChatModule.initChat(currentUserData, users);
             }
         } catch (chatErr) {
             console.error('初始化聊天模組失敗:', chatErr);
