@@ -21454,9 +21454,25 @@ class FirebaseDataManager {
         if (!this.isReady) return { success: false, data: [] };
         try {
             const colRef = window.firebase.collection(window.firebase.db, 'consultations');
-            const start = new Date(startDateStr);
+            const parseOrNull = (s) => {
+                if (!s || typeof s !== 'string') return null;
+                const d = new Date(s);
+                return isNaN(d.getTime()) ? null : d;
+            };
+            let start = parseOrNull(startDateStr);
+            let end = parseOrNull(endDateStr);
+            const today = new Date();
+            if (!start && end) {
+                start = new Date(end);
+            }
+            if (!end && start) {
+                end = new Date(start);
+            }
+            if (!start && !end) {
+                start = new Date(today);
+                end = new Date(today);
+            }
             start.setHours(0, 0, 0, 0);
-            const end = new Date(endDateStr);
             end.setHours(23, 59, 59, 999);
             const pageSize = 100;
             const parts = [];
