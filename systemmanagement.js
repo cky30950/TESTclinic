@@ -629,6 +629,41 @@ async function importClinicBackup(data) {
             return clone;
         });
     }
+    function enrichConsultationsWithPatientName(items, patients) {
+        try {
+            const map = {};
+            if (Array.isArray(patients)) {
+                for (const p of patients) {
+                    if (!p) continue;
+                    const idStr = (p.id !== undefined && p.id !== null) ? String(p.id) : null;
+                    if (!idStr) continue;
+                    const name =
+                        p.name ||
+                        p.patientName ||
+                        p.fullName ||
+                        p.displayName ||
+                        p.chineseName ||
+                        p.englishName ||
+                        '';
+                    map[idStr.trim()] = name;
+                }
+            }
+            return Array.isArray(items)
+                ? items.map(c => {
+                    const clone = { ...(c || {}) };
+                    if (clone.patientId !== undefined && clone.patientId !== null) {
+                        const pid = String(clone.patientId).trim();
+                        if ((!clone.patientName || String(clone.patientName).trim() === '') && map[pid]) {
+                            clone.patientName = map[pid];
+                        }
+                    }
+                    return clone;
+                })
+                : [];
+        } catch (_e) {
+            return Array.isArray(items) ? items.slice() : [];
+        }
+    }
     // 覆蓋各集合並更新進度
     let stepCount = 0;
     // 覆蓋需要還原的集合，順序為：patients -> consultations -> users -> billingItems -> patientPackages
@@ -636,7 +671,9 @@ async function importClinicBackup(data) {
     stepCount++;
     if (progressCallback) progressCallback(stepCount, totalSteps);
 
-    await replaceCollection('consultations', normalizeConsultations(Array.isArray(data.consultations) ? data.consultations : []));
+    const normalizedConsultations = normalizeConsultations(Array.isArray(data.consultations) ? data.consultations : []);
+    const enrichedConsultations = enrichConsultationsWithPatientName(normalizedConsultations, Array.isArray(data.patients) ? data.patients : []);
+    await replaceCollection('consultations', enrichedConsultations);
     stepCount++;
     if (progressCallback) progressCallback(stepCount, totalSteps);
 
