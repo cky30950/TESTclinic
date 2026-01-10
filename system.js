@@ -1706,8 +1706,9 @@ async function fetchUsers(forceRefresh = false) {
                     localStorage.setItem('currentClinicId', currentClinicId);
                 }
             }
-            if (!currentClinicId && clinicsList.length) {
-                currentClinicId = clinicsList[0].id;
+            if (((!currentClinicId) || currentClinicId === 'local-default') && clinicsList.length) {
+                const firstRealClinic = clinicsList.find(c => c && c.id && c.id !== 'local-default') || clinicsList[0];
+                currentClinicId = firstRealClinic.id;
                 localStorage.setItem('currentClinicId', currentClinicId);
             }
             if (currentClinicId && currentClinicId !== 'local-default') {
@@ -4182,7 +4183,13 @@ async function recordInventoryHistory(type, entries, extra = {}) {
          */
         function getClinicScopedStorageKey(base) {
             try {
-                const cid = localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
+                const lsCid = localStorage.getItem('currentClinicId');
+                const memCid = (typeof currentClinicId !== 'undefined' ? currentClinicId : null);
+                let cid = lsCid || memCid || 'local-default';
+                if (cid === 'local-default' && Array.isArray(clinicsList) && clinicsList.length) {
+                    const firstRealClinic = clinicsList.find(c => c && c.id && c.id !== 'local-default') || clinicsList[0];
+                    cid = firstRealClinic.id || cid;
+                }
                 return `${base}_${cid}`;
             } catch (_e) {
                 return `${base}_local-default`;
