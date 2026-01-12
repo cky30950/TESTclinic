@@ -7921,6 +7921,10 @@ function parseConsultationDate(dateInput) {
     if (!dateInput) return null;
     
     try {
+        if (dateInput && typeof dateInput.toDate === 'function') {
+            const d = dateInput.toDate();
+            return isNaN(d.getTime()) ? null : d;
+        }
         // 如果是 Firebase Timestamp 格式
         if (dateInput.seconds) {
             return new Date(dateInput.seconds * 1000);
@@ -7928,7 +7932,19 @@ function parseConsultationDate(dateInput) {
         
         // 如果是字符串格式
         if (typeof dateInput === 'string') {
-            const parsed = new Date(dateInput);
+            const s = dateInput.trim();
+            const m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+            if (m) {
+                const y = parseInt(m[1], 10);
+                const mo = parseInt(m[2], 10) - 1;
+                const d = parseInt(m[3], 10);
+                const hh = m[4] ? parseInt(m[4], 10) : 0;
+                const mm = m[5] ? parseInt(m[5], 10) : 0;
+                const ss = m[6] ? parseInt(m[6], 10) : 0;
+                const dt = new Date(y, mo, d, hh, mm, ss);
+                if (!isNaN(dt.getTime())) return dt;
+            }
+            const parsed = new Date(s);
             if (!isNaN(parsed.getTime())) {
                 return parsed;
             }
@@ -23476,7 +23492,7 @@ async function displayMedicalRecords(pageChange = false) {
     try {
         const getTimestamp = (rec) => {
             try {
-                const raw = rec.date || null;
+                const raw = rec.date || rec.createdAt || rec.updatedAt || null;
                 const parsed = parseConsultationDate(raw);
                 return parsed && !isNaN(parsed.getTime()) ? parsed.getTime() : 0;
             } catch (_err) {
@@ -23564,7 +23580,7 @@ async function displayMedicalRecords(pageChange = false) {
             } catch (_eClinicList) {}
             let dateStr = '';
             try {
-                const rawDate = rec.date || null;
+                const rawDate = rec.date || rec.createdAt || rec.updatedAt || null;
                 const parsed = parseConsultationDate(rawDate);
                 if (parsed && !isNaN(parsed.getTime())) {
                     const locale = lang === 'en' ? 'en-US' : 'zh-TW';
@@ -23673,6 +23689,7 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
             const arr = [];
             snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
             try {
+                let needsRefetch = false;
                 for (const r of arr) {
                     if (r && typeof r.date === 'string') {
                         const parsed = parseConsultationDate(r.date);
@@ -23683,15 +23700,37 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
                                     { date: parsed }
                                 );
                                 r.date = parsed;
+                                needsRefetch = true;
                             } catch (_udErr) {}
                         }
                     }
                 }
+                if (needsRefetch) {
+                    const snapNew = await window.firebase.getDocs(window.firebase.firestoreQuery(
+                        colRef,
+                        window.firebase.orderBy('date', 'desc'),
+                        window.firebase.limit(pageSize)
+                    ));
+                    const refreshed = [];
+                    snapNew.forEach(d => refreshed.push({ id: d.id, ...d.data() }));
+                    medicalRecordPageCache[1] = refreshed;
+                    medicalRecordPageCursors[1] = snapNew.docs.length ? snapNew.docs[snapNew.docs.length - 1] : null;
+                    try {
+                        refreshed.sort((a, b) => {
+                            const A = parseConsultationDate(a.date || a.createdAt || a.updatedAt || null);
+                            const B = parseConsultationDate(b.date || b.createdAt || b.updatedAt || null);
+                            const tA = (A && !isNaN(A.getTime())) ? A.getTime() : 0;
+                            const tB = (B && !isNaN(B.getTime())) ? B.getTime() : 0;
+                            return tB - tA;
+                        });
+                    } catch (_e2) {}
+                    return refreshed;
+                }
             } catch (_normErr) {}
             try {
                 arr.sort((a, b) => {
-                    const A = parseConsultationDate(a.date || null);
-                    const B = parseConsultationDate(b.date || null);
+                    const A = parseConsultationDate(a.date || a.createdAt || a.updatedAt || null);
+                    const B = parseConsultationDate(b.date || b.createdAt || b.updatedAt || null);
                     const tA = (A && !isNaN(A.getTime())) ? A.getTime() : 0;
                     const tB = (B && !isNaN(B.getTime())) ? B.getTime() : 0;
                     return tB - tA;
@@ -23742,8 +23781,8 @@ async function fetchMedicalRecordPage(page = 1, pageSize = 10) {
         } catch (_normErr2) {}
         try {
             arr2.sort((a, b) => {
-                const A = parseConsultationDate(a.date || null);
-                const B = parseConsultationDate(b.date || null);
+                const A = parseConsultationDate(a.date || a.createdAt || a.updatedAt || null);
+                const B = parseConsultationDate(b.date || b.createdAt || b.updatedAt || null);
                 const tA = (A && !isNaN(A.getTime())) ? A.getTime() : 0;
                 const tB = (B && !isNaN(B.getTime())) ? B.getTime() : 0;
                 return tB - tA;
@@ -23792,8 +23831,8 @@ async function fetchMedicalRecordPageAsc(ascIndex = 1, pageSize = 10) {
             } catch (_normErr3) {}
             try {
                 arr.sort((a, b) => {
-                    const A = parseConsultationDate(a.date || null);
-                    const B = parseConsultationDate(b.date || null);
+                    const A = parseConsultationDate(a.date || a.createdAt || a.updatedAt || null);
+                    const B = parseConsultationDate(b.date || b.createdAt || b.updatedAt || null);
                     const tA = (A && !isNaN(A.getTime())) ? A.getTime() : 0;
                     const tB = (B && !isNaN(B.getTime())) ? B.getTime() : 0;
                     return tB - tA;
