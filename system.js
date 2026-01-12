@@ -1946,6 +1946,42 @@ async function fetchUsers(forceRefresh = false) {
                 if (currentSel && currentClinicId) currentSel.value = currentClinicId;
             } catch (_e) {}
         }
+        async function resolveClinicSettingsByConsultation(consultation) {
+            let result = {};
+            try {
+                const cid = consultation && consultation.clinicId;
+                const cname = consultation && consultation.clinicName;
+                if (cid && cid !== 'local-default') {
+                    try {
+                        const cur = await window.firebaseDataManager.getClinicById(cid);
+                        if (cur && cur.success && cur.data) {
+                            result = cur.data;
+                        }
+                    } catch (_eFetchClinic) {}
+                }
+                if (!result || Object.keys(result).length === 0) {
+                    try {
+                        if (Array.isArray(clinicsList)) {
+                            const byId = cid ? clinicsList.find(c => String(c.id) === String(cid)) : null;
+                            result = byId || result;
+                            if ((!result || Object.keys(result).length === 0) && cname) {
+                                const byName = clinicsList.find(c => (String(c.chineseName) === String(cname)) || (String(c.englishName) === String(cname)));
+                                result = byName || result;
+                            }
+                        }
+                    } catch (_eList) {}
+                }
+                if (!result || Object.keys(result).length === 0) {
+                    result = clinicSettings || {};
+                }
+            } catch (_err) {
+                result = clinicSettings || {};
+            }
+            return result;
+        }
+        if (!window.resolveClinicSettingsByConsultation) {
+            window.resolveClinicSettingsByConsultation = resolveClinicSettingsByConsultation;
+        }
         
         // 浮動提示功能改用 Toastr 提供視覺與功能性提示
         function showToast(message, type = 'info') {
@@ -10666,6 +10702,7 @@ async function printConsultationRecord(consultationId, consultationData = null) 
             keepReceipt: isEnglish ? 'Please keep this receipt properly' : '本收據請妥善保存',
             contactCounter: isEnglish ? 'If you have any questions, please contact the counter' : '如有疑問請洽櫃檯'
         };
+        const clinicPrint = await resolveClinicSettingsByConsultation(consultation);
         // Construct receipt HTML with localized labels
         const printContent = `
             <!DOCTYPE html>
@@ -10828,9 +10865,9 @@ async function printConsultationRecord(consultationId, consultationData = null) 
                 <div class="receipt-container">
                     <!-- Clinic Header -->
                     <div class="clinic-header">
-                        <div class="clinic-name">${clinicSettings.chineseName || '名醫診所系統'}</div>
-                        <div class="clinic-subtitle">${clinicSettings.englishName || 'Dr.Great Clinic'}</div>
-                        <div class="clinic-subtitle">${isEnglish ? 'Tel:' : '電話：'}${clinicSettings.phone || '(852) 2345-6789'}　${isEnglish ? 'Address:' : '地址：'}${clinicSettings.address || '香港中環皇后大道中123號'}</div>
+                        <div class="clinic-name">${clinicPrint.chineseName || '名醫診所系統'}</div>
+                        <div class="clinic-subtitle">${clinicPrint.englishName || 'Dr.Great Clinic'}</div>
+                        <div class="clinic-subtitle">${isEnglish ? 'Tel:' : '電話：'}${clinicPrint.phone || '(852) 2345-6789'}　${isEnglish ? 'Address:' : '地址：'}${clinicPrint.address || '香港中環皇后大道中123號'}</div>
                     </div>
                     
                     <!-- Receipt Title -->
@@ -11078,7 +11115,7 @@ async function printConsultationRecord(consultationId, consultationData = null) 
                         </div>
                         <div class="footer-row">
                             <span>${TR.clinicHours}${colon}</span>
-                            <span>${clinicSettings.businessHours || '週一至週五 09:00-18:00'}</span>
+                            <span>${clinicPrint.businessHours || '週一至週五 09:00-18:00'}</span>
                         </div>
                         <div class="footer-row">
                             <span>${TR.keepReceipt}</span>
@@ -11213,6 +11250,7 @@ async function printAttendanceCertificate(consultationId, consultationData = nul
             certificateIssuedAt: isEnglish ? 'Certificate Issued At' : '證明書開立時間',
             watermark: isEnglish ? 'Arrival Certificate' : '到診證明'
         };
+        const clinicPrint = await resolveClinicSettingsByConsultation(consultation);
         // Build certificate HTML
         const printContent = `
             <!DOCTYPE html>
@@ -11389,9 +11427,9 @@ async function printAttendanceCertificate(consultationId, consultationData = nul
                     <div class="content">
                         <!-- Clinic Header -->
                         <div class="clinic-header">
-                            <div class="clinic-name">${clinicSettings.chineseName || '名醫診所系統'}</div>
-                            <div class="clinic-subtitle">${clinicSettings.englishName || 'Dr.Great Clinic'}</div>
-                            <div class="clinic-subtitle">${isEnglish ? 'Tel:' : '電話：'}${clinicSettings.phone || '(852) 2345-6789'}　${isEnglish ? 'Address:' : '地址：'}${clinicSettings.address || '香港中環皇后大道中123號'}</div>
+                            <div class="clinic-name">${clinicPrint.chineseName || '名醫診所系統'}</div>
+                            <div class="clinic-subtitle">${clinicPrint.englishName || 'Dr.Great Clinic'}</div>
+                            <div class="clinic-subtitle">${isEnglish ? 'Tel:' : '電話：'}${clinicPrint.phone || '(852) 2345-6789'}　${isEnglish ? 'Address:' : '地址：'}${clinicPrint.address || '香港中環皇后大道中123號'}</div>
                         </div>
                         
                         <!-- Certificate Number -->
@@ -11489,7 +11527,7 @@ async function printAttendanceCertificate(consultationId, consultationData = nul
                         <!-- Footer Note -->
                         <div class="footer-note">
                             <div>${TC.footerNote1}</div>
-                            <div>${TC.footerTel}${colon}${clinicSettings.phone || '(852) 2345-6789'} | ${TC.footerHours}${colon}${clinicSettings.businessHours || '週一至週五 09:00-18:00'}</div>
+                            <div>${TC.footerTel}${colon}${clinicPrint.phone || '(852) 2345-6789'} | ${TC.footerHours}${colon}${clinicPrint.businessHours || '週一至週五 09:00-18:00'}</div>
                             <div style="margin-top: 10px; font-size: 10px;">
                                 ${TC.certificateIssuedAt}${colon}${new Date().toLocaleString(dateLocale)}
                             </div>
@@ -11653,6 +11691,7 @@ async function printSickLeave(consultationId, consultationData = null) {
             issuedAt: isEnglish ? 'Certificate Issued At' : '證明書開立時間',
             watermark: isEnglish ? 'Sick Leave' : '病假證明'
         };
+        const clinicPrint = await resolveClinicSettingsByConsultation(consultation);
         // 構建 HTML 內容
         const printContent = `
             <!DOCTYPE html>
@@ -11825,9 +11864,9 @@ async function printSickLeave(consultationId, consultationData = null) {
                     <div class="watermark">${SL.watermark}</div>
                     <div class="content">
                         <div class="clinic-header">
-                            <div class="clinic-name">${clinicSettings.chineseName || '名醫診所系統'}</div>
-                            <div class="clinic-subtitle">${clinicSettings.englishName || 'Dr.Great Clinic'}</div>
-                            <div class="clinic-subtitle">${isEnglish ? 'Tel' : '電話'}${colon}${clinicSettings.phone || '(852) 2345-6789'}　${isEnglish ? 'Address' : '地址'}${colon}${clinicSettings.address || '香港中環皇后大道中123號'}</div>
+                            <div class="clinic-name">${clinicPrint.chineseName || '名醫診所系統'}</div>
+                            <div class="clinic-subtitle">${clinicPrint.englishName || 'Dr.Great Clinic'}</div>
+                            <div class="clinic-subtitle">${isEnglish ? 'Tel' : '電話'}${colon}${clinicPrint.phone || '(852) 2345-6789'}　${isEnglish ? 'Address' : '地址'}${colon}${clinicPrint.address || '香港中環皇后大道中123號'}</div>
                         </div>
                         <div class="certificate-number">${SL.certificateNumber}${colon}SL${consultation.id.toString().padStart(6, '0')}</div>
                         <div class="certificate-title">${SL.title}</div>
@@ -11862,7 +11901,7 @@ async function printSickLeave(consultationId, consultationData = null) {
                         </div>
                         <div class="footer-note">
                             <div>${SL.footerNote}</div>
-                            <div>${SL.footerTel}${colon}${clinicSettings.phone || '(852) 2345-6789'} | ${SL.footerHours}${colon}${clinicSettings.businessHours || '週一至週五 09:00-18:00'}</div>
+                            <div>${SL.footerTel}${colon}${clinicPrint.phone || '(852) 2345-6789'} | ${SL.footerHours}${colon}${clinicPrint.businessHours || '週一至週五 09:00-18:00'}</div>
                             <div style="margin-top: 10px; font-size: 10px;">${SL.issuedAt}${colon}${new Date().toLocaleString(dateLocale)}</div>
                         </div>
                     </div>
@@ -12337,6 +12376,7 @@ async function printPrescriptionInstructions(consultationId, consultationData = 
             saveAdvice: isEnglish ? 'Please keep this advice safe, this prescription cannot be refilled.' : '本醫囑請妥善保存，此藥方不可重配',
             contact: isEnglish ? 'If you have any questions, please contact the front desk.' : '如有疑問請洽櫃檯'
         };
+        const clinicPrint = await resolveClinicSettingsByConsultation(consultation);
         // 構建列印內容
         const printContent = `
             <!DOCTYPE html>
@@ -12452,9 +12492,9 @@ async function printPrescriptionInstructions(consultationId, consultationData = 
             <body>
                 <div class="advice-container">
                     <div class="clinic-header">
-                        <div class="clinic-name">${clinicSettings.chineseName || '名醫診所系統'}</div>
-                        <div class="clinic-subtitle">${clinicSettings.englishName || 'Dr.Great Clinic'}</div>
-                        <div class="clinic-subtitle">${isEnglish ? 'Tel' : '電話'}${colon}${clinicSettings.phone || '(852) 2345-6789'}　${isEnglish ? 'Address' : '地址'}${colon}${clinicSettings.address || '香港中環皇后大道中123號'}</div>
+                        <div class="clinic-name">${clinicPrint.chineseName || '名醫診所系統'}</div>
+                        <div class="clinic-subtitle">${clinicPrint.englishName || 'Dr.Great Clinic'}</div>
+                        <div class="clinic-subtitle">${isEnglish ? 'Tel' : '電話'}${colon}${clinicPrint.phone || '(852) 2345-6789'}　${isEnglish ? 'Address' : '地址'}${colon}${clinicPrint.address || '香港中環皇后大道中123號'}</div>
                     </div>
                     <div class="advice-title">${PI.title}</div>
                     <div class="patient-info">
@@ -12477,7 +12517,7 @@ async function printPrescriptionInstructions(consultationId, consultationData = 
                     ${followUpHtml ? `<div class="section-title">${PI.followUp}</div><div class="section-content">${followUpHtml}</div>` : ''}
                     <div class="footer-info">
                         <div class="footer-row"><span>${PI.printTime}${colon}</span><span>${new Date().toLocaleString(dateLocale)}</span></div>
-                        <div class="footer-row"><span>${PI.businessHours}${colon}</span><span>${clinicSettings.businessHours || '週一至週五 09:00-18:00'}</span></div>
+                        <div class="footer-row"><span>${PI.businessHours}${colon}</span><span>${clinicPrint.businessHours || '週一至週五 09:00-18:00'}</span></div>
                         <div class="footer-row"><span>${PI.saveAdvice}</span><span>${PI.contact}</span></div>
                     </div>
                 </div>
