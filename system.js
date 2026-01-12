@@ -4048,13 +4048,6 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                         const snap2 = await window.firebase.get(baseRef);
                         obj = snap2 && snap2.exists() ? snap2.val() || {} : {};
                     } catch (_fe) {}
-                    if (!obj || Object.keys(obj).length === 0) {
-                        try {
-                            const globalRef = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/' + String(type));
-                            const snapGlobal = await window.firebase.get(globalRef);
-                            obj = snapGlobal && snapGlobal.exists() ? snapGlobal.val() || {} : {};
-                        } catch (_fg) {}
-                    }
                 }
                 const keys = Object.keys(obj).sort((a, b) => Number(b) - Number(a)).slice(0, 20);
                 for (const k of keys) {
@@ -4145,35 +4138,10 @@ async function recordInventoryHistory(type, entries, extra = {}) {
                                     if (modes.size === 1) {
                                         const m = Array.from(modes)[0];
                                         locText = '，入庫位置：' + (m === 'slice' ? '飲片' : '顆粒沖劑');
-                                    } else if (modes.size > 1) {
-                                        locText = '，入庫位置：混合';
-                                    }
+                                } else if (modes.size > 1) {
+                                    locText = '，入庫位置：混合';
                                 }
-                            } else {
-                                try {
-                                    const globalRef3 = window.firebase.ref(window.firebase.rtdb, 'inventoryHistory/out');
-                                    const q3g = window.firebase.query(globalRef3, window.firebase.orderByChild('consultationId'), window.firebase.equalTo(String(cid)));
-                                    let snap3g = null;
-                                    try { snap3g = await window.firebase.get(q3g); } catch (_e3g) { snap3g = null; }
-                                    if (snap3g && snap3g.exists()) {
-                                        const obj3g = snap3g.val() || {};
-                                        let latestRecG = null;
-                                        for (const kk in obj3g) {
-                                            const rr = obj3g[kk] || {};
-                                            if (!Array.isArray(rr.entries)) continue;
-                                            if (!latestRecG || Number(rr.timestamp || 0) > Number(latestRecG.timestamp || 0)) latestRecG = rr;
-                                        }
-                                        if (latestRecG && Array.isArray(latestRecG.entries)) {
-                                            const modes = new Set(latestRecG.entries.map(e => e && e.mode).filter(m => m === 'slice' || m === 'granule'));
-                                            if (modes.size === 1) {
-                                                const m = Array.from(modes)[0];
-                                                locText = '，入庫位置：' + (m === 'slice' ? '飲片' : '顆粒沖劑');
-                                            } else if (modes.size > 1) {
-                                                locText = '，入庫位置：混合';
-                                            }
-                                        }
-                                    }
-                                } catch (_eLocG) {}
+                            }
                             }
                         } catch (_eLoc) {}
                         div.innerHTML = '<div class="text-sm text-gray-600">舊出庫記錄（病歷編號：' + mrn + locText + extraTag + '）</div>' +
