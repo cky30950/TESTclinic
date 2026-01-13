@@ -1724,6 +1724,7 @@ async function fetchUsers(forceRefresh = false) {
             updateClinicSettingsDisplay();
             populateClinicSelectors();
             updateCurrentClinicDisplay();
+            try { localStorage.setItem('clinics', JSON.stringify(clinicsList)); } catch (_e) {}
         }
         function populateClinicSelectors() {
             try {
@@ -1945,6 +1946,16 @@ async function fetchUsers(forceRefresh = false) {
                 const currentSel = document.getElementById('currentClinicSelector');
                 if (currentSel && currentClinicId) currentSel.value = currentClinicId;
             } catch (_e) {}
+            try {
+                const switchBtn = document.getElementById('clinicSwitchButton');
+                if (switchBtn) {
+                    if (Array.isArray(clinicsList) && clinicsList.length <= 1) {
+                        switchBtn.classList.add('hidden');
+                    } else {
+                        switchBtn.classList.remove('hidden');
+                    }
+                }
+            } catch (_e2) {}
         }
         async function resolveClinicSettingsByConsultation(consultation) {
             let result = {};
