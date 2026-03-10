@@ -1,11 +1,10 @@
-/**
- * 個人統計分析模組（V2）
- * 僅處理病歷中的「處方」與「針灸備註」欄位，漸進讀取＋本地快取＋增量更新。
- */
+
 let personalHerbChartInstance = null;
 let personalFormulaChartInstance = null;
 let personalAcupointChartInstance = null;
 let personalStatsCurrentMonth = null;
+let personalStatsCurrentClinic = 'ALL';
+let personalStatsSelectedClinicName = '';
 
 function psReadCache(doctor) {
     try {
@@ -91,6 +90,24 @@ function computeStatsFromSummaries(list) {
     return { herbCounts, formulaCounts, acupointCounts };
 }
 
+function normalizeText(s) {
+    if (s == null) return '';
+    try {
+        return String(s).trim().toLowerCase();
+    } catch (_e) { return ''; }
+}
+
+function filterByClinic(list, clinicId, clinicName) {
+    if (!clinicId || clinicId === 'ALL') return (list || []).filter(it => normalizeText(it.clinicId || '') !== 'local-default');
+    const idNorm = normalizeText(clinicId);
+    const nameNorm = normalizeText(clinicName);
+    return (list || []).filter(it => {
+        const itemId = normalizeText(it.clinicId || '');
+        const itemName = normalizeText(it.clinicName || '');
+        return (itemId && itemId === idNorm) || (itemName && nameNorm && itemName === nameNorm);
+    });
+}
+
 function filterByMonth(list, monthKey) {
     if (!monthKey) return list || [];
     return (list || []).filter(it => getMonthKeyFromIso(it.dateIso) === monthKey);
@@ -115,15 +132,38 @@ function computeAvailableMonths(list) {
 function renderPersonalStatistics(stats) {
     if (!stats) return;
     const { herbCounts, formulaCounts, acupointCounts } = stats;
+    function getLang() {
+        try { return (localStorage.getItem('lang') || 'zh').toLowerCase(); } catch (_e) { return 'zh'; }
+    }
+    function mapDisplayName(name, type) {
+        const langSel = getLang();
+        if (!langSel.startsWith('en')) return name;
+        try {
+            if (type === 'herb' || type === 'formula') {
+                if (Array.isArray(herbLibrary)) {
+                    const item = herbLibrary.find(h => h && h.name === name && (type === 'herb' ? h.type === 'herb' : h.type === 'formula'));
+                    if (item && item.englishName) return item.englishName;
+                }
+            } else if (type === 'acupoint') {
+                if (Array.isArray(acupointLibrary)) {
+                    const ac = acupointLibrary.find(a => a && a.name === name);
+                    if (ac && ac.englishName) return ac.englishName;
+                }
+            }
+        } catch (_e) {}
+        return name;
+    }
     function renderList(counts, listId) {
         const listEl = document.getElementById(listId);
         if (!listEl) return [];
         listEl.innerHTML = '';
         const entries = Object.entries(counts || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        const type = (listId === 'personalHerbList') ? 'herb' : (listId === 'personalFormulaList') ? 'formula' : 'acupoint';
         entries.forEach(([name, count]) => {
             const li = document.createElement('li');
             li.className = 'py-1 flex justify-between';
-            li.innerHTML = `<span>${window.escapeHtml(name)}</span><span class="font-semibold">${count}</span>`;
+            const disp = mapDisplayName(name, type);
+            li.innerHTML = `<span>${window.escapeHtml(disp)}</span><span class="font-semibold">${count}</span>`;
             listEl.appendChild(li);
         });
         return entries;
@@ -134,22 +174,23 @@ function renderPersonalStatistics(stats) {
         if (oldInstance && typeof oldInstance.destroy === 'function') {
             try { oldInstance.destroy(); } catch (_e) {}
         }
-        const labels = entries.map(e => e[0]);
+        const type = (canvasId === 'personalHerbChart') ? 'herb' : (canvasId === 'personalFormulaChart') ? 'formula' : 'acupoint';
+        const labels = entries.map(e => mapDisplayName(e[0], type));
         const dataVals = entries.map(e => e[1]);
         const ctx = canvas.getContext('2d');
         return new Chart(ctx, {
             type: 'bar',
             data: {
                 labels,
-                datasets: [{ label: '使用次數', data: dataVals }],
+                datasets: [{ label: (typeof window.t === 'function' ? window.t('使用次數') : '使用次數'), data: dataVals }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { title: { display: true, text: '名稱' } },
-                    y: { title: { display: true, text: '使用次數' }, beginAtZero: true },
+                    x: { title: { display: true, text: (typeof window.t === 'function' ? window.t('名稱') : '名稱') } },
+                    y: { title: { display: true, text: (typeof window.t === 'function' ? window.t('使用次數') : '使用次數') }, beginAtZero: true },
                 },
             },
         });
@@ -185,7 +226,9 @@ async function fetchSummariesByDoctor(doctor) {
                 prescription: d.prescription || '',
                 acupunctureNotes: d.acupunctureNotes || '',
                 updatedAt,
-                dateIso
+                dateIso,
+                clinicId: d.clinicId || null,
+                clinicName: d.clinicName || ''
             });
         };
         snap.forEach(collect);
@@ -236,7 +279,9 @@ async function fetchSummariesByDoctor(doctor) {
                         prescription: d.prescription || '',
                         acupunctureNotes: d.acupunctureNotes || '',
                         updatedAt: d.updatedAt || d.createdAt || null,
-                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null
+                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null,
+                        clinicId: d.clinicId || null,
+                        clinicName: d.clinicName || ''
                     });
                 }
             }
@@ -275,7 +320,9 @@ async function fetchSummariesUnionDoctorOrCreator(doctor) {
                 prescription: d.prescription || '',
                 acupunctureNotes: d.acupunctureNotes || '',
                 updatedAt,
-                dateIso
+                dateIso,
+                clinicId: d.clinicId || null,
+                clinicName: d.clinicName || ''
             };
             const key = String(item.id);
             if (!seen.has(key)) {
@@ -337,7 +384,9 @@ async function fetchSummariesUnionDoctorOrCreator(doctor) {
                         prescription: d.prescription || '',
                         acupunctureNotes: d.acupunctureNotes || '',
                         updatedAt: d.updatedAt || d.createdAt || null,
-                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null
+                        dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null,
+                        clinicId: d.clinicId || null,
+                        clinicName: d.clinicName || ''
                     };
                     const key = String(item.id);
                     if (!seen.has(key)) {
@@ -362,7 +411,9 @@ async function applyDeltaUpdates(doctor, sinceISO, existingList) {
                     prescription: d.prescription || '',
                     acupunctureNotes: d.acupunctureNotes || '',
                     updatedAt: d.updatedAt || d.createdAt || null,
-                    dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null
+                    dateIso: normalizeDateIso(d.date) || normalizeDateIso(d.createdAt) || null,
+                    clinicId: d.clinicId || null,
+                    clinicName: d.clinicName || ''
                 };
                 index.set(String(item.id), item);
             }
@@ -377,7 +428,7 @@ function populateMonthSelect(months, currentKey) {
     sel.innerHTML = '';
     const allOpt = document.createElement('option');
     allOpt.value = 'ALL';
-    allOpt.textContent = '全部月份';
+    allOpt.textContent = window.t('全部月份');
     sel.appendChild(allOpt);
     const desiredKey = currentKey || 'ALL';
     const seen = new Set();
@@ -402,7 +453,62 @@ function populateMonthSelect(months, currentKey) {
         try {
             const cache = psReadCache(currentUser);
             const list = cache && Array.isArray(cache.list) ? cache.list : [];
-            const sub = personalStatsCurrentMonth === 'ALL' ? list : filterByMonth(list, personalStatsCurrentMonth);
+            const byClinic = filterByClinic(list, personalStatsCurrentClinic, personalStatsSelectedClinicName);
+            const sub = personalStatsCurrentMonth === 'ALL' ? byClinic : filterByMonth(byClinic, personalStatsCurrentMonth);
+            const stats = computeStatsFromSummaries(sub);
+            renderPersonalStatistics(stats);
+        } catch (_e) {}
+    };
+}
+
+function readClinicsForPersonalStats() {
+    try {
+        const s = localStorage.getItem('clinics');
+        const arr = s ? JSON.parse(s) : [];
+        if (!Array.isArray(arr)) return [];
+        return arr.filter(c => normalizeText(c && c.id ? c.id : '') !== 'local-default').map(c => ({
+            id: c && c.id ? c.id : '',
+            name: (c && (c.chineseName || c.englishName)) ? (c.chineseName || c.englishName) : (c && c.id ? c.id : '')
+        }));
+    } catch (_e) {
+        return [];
+    }
+}
+
+function populateClinicSelect(initialClinicId) {
+    const sel = document.getElementById('personalStatsClinicSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = 'ALL';
+    allOpt.textContent = window.t('全部診所');
+    sel.appendChild(allOpt);
+    const clinics = readClinicsForPersonalStats();
+    clinics.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name || c.id || '';
+        sel.appendChild(opt);
+    });
+    const desired = initialClinicId || 'ALL';
+    sel.value = desired;
+    personalStatsCurrentClinic = desired;
+    const curObj = clinics.find(c => String(c.id) === String(desired));
+    personalStatsSelectedClinicName = curObj ? (curObj.name || '') : '';
+    sel.onchange = function () {
+        personalStatsCurrentClinic = this.value || personalStatsCurrentClinic;
+        try {
+            const cList = readClinicsForPersonalStats();
+            const found = cList.find(c => String(c.id) === String(personalStatsCurrentClinic));
+            personalStatsSelectedClinicName = found ? (found.name || '') : '';
+        } catch (_e0) {}
+        try {
+            const cache = psReadCache(currentUser);
+            const list = cache && Array.isArray(cache.list) ? cache.list : [];
+            const byClinic = filterByClinic(list, personalStatsCurrentClinic, personalStatsSelectedClinicName);
+            const months = computeAvailableMonths(byClinic);
+            populateMonthSelect(months, personalStatsCurrentMonth || 'ALL');
+            const sub = personalStatsCurrentMonth === 'ALL' ? byClinic : filterByMonth(byClinic, personalStatsCurrentMonth);
             const stats = computeStatsFromSummaries(sub);
             renderPersonalStatistics(stats);
         } catch (_e) {}
@@ -413,16 +519,24 @@ async function loadPersonalStatistics() {
     const doctor = currentUser;
     const cached = psReadCache(doctor);
     if (cached && cached.stats) {
-        const months = computeAvailableMonths(cached.list || []);
+        populateClinicSelect('ALL');
+        const byClinicInit = filterByClinic(cached.list || [], personalStatsCurrentClinic, personalStatsSelectedClinicName);
+        const months = computeAvailableMonths(byClinicInit);
         populateMonthSelect(months, 'ALL');
         const initialList = cached.list || [];
-        renderPersonalStatistics(computeStatsFromSummaries(initialList));
+        const initialFiltered = personalStatsCurrentMonth === 'ALL'
+            ? filterByClinic(initialList, personalStatsCurrentClinic, personalStatsSelectedClinicName)
+            : filterByMonth(filterByClinic(initialList, personalStatsCurrentClinic, personalStatsSelectedClinicName), personalStatsCurrentMonth);
+        renderPersonalStatistics(computeStatsFromSummaries(initialFiltered));
         try {
             if (!cached.fullFetched) {
                 const full = await fetchSummariesUnionDoctorOrCreator(doctor);
-                const monthsFull = computeAvailableMonths(full);
+                const byClinicFull = filterByClinic(full, personalStatsCurrentClinic, personalStatsSelectedClinicName);
+                const monthsFull = computeAvailableMonths(byClinicFull);
                 populateMonthSelect(monthsFull, personalStatsCurrentMonth || 'ALL');
-                const useFull = personalStatsCurrentMonth === 'ALL' ? full : filterByMonth(full, personalStatsCurrentMonth);
+                const useFull = personalStatsCurrentMonth === 'ALL'
+                    ? byClinicFull
+                    : filterByMonth(byClinicFull, personalStatsCurrentMonth);
                 const statsFull = computeStatsFromSummaries(useFull);
                 const lastFull = (() => {
                     let latest = 0;
@@ -440,9 +554,12 @@ async function loadPersonalStatistics() {
                 return;
             }
             const merged = await fetchSummariesUnionDoctorOrCreator(doctor);
-            const months2 = computeAvailableMonths(merged);
+            const byClinic2 = filterByClinic(merged, personalStatsCurrentClinic, personalStatsSelectedClinicName);
+            const months2 = computeAvailableMonths(byClinic2);
             populateMonthSelect(months2, personalStatsCurrentMonth || 'ALL');
-            const initialList2 = personalStatsCurrentMonth === 'ALL' ? merged : filterByMonth(merged, personalStatsCurrentMonth);
+            const initialList2 = personalStatsCurrentMonth === 'ALL'
+                ? byClinic2
+                : filterByMonth(byClinic2, personalStatsCurrentMonth);
             const stats = computeStatsFromSummaries(initialList2);
             const lastSyncAt = (() => {
                 let latest = 0;
@@ -461,10 +578,14 @@ async function loadPersonalStatistics() {
         return;
     }
     const summaries = await fetchSummariesUnionDoctorOrCreator(doctor);
-    const months = computeAvailableMonths(summaries);
+    populateClinicSelect('ALL');
+    const byClinicInitial = filterByClinic(summaries, personalStatsCurrentClinic, personalStatsSelectedClinicName);
+    const months = computeAvailableMonths(byClinicInitial);
     populateMonthSelect(months, 'ALL');
-    const initialList = summaries;
-    const stats = computeStatsFromSummaries(initialList);
+    const initialFiltered = personalStatsCurrentMonth === 'ALL'
+        ? byClinicInitial
+        : filterByMonth(byClinicInitial, personalStatsCurrentMonth);
+    const stats = computeStatsFromSummaries(initialFiltered);
     const lastSyncAt = (() => {
         let latest = 0;
         for (const c of summaries) {

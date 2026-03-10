@@ -4,22 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>名醫診所系統</title>
-    <!-- 新增網站圖標 (favicon) -->
+    
     <link rel="icon" type="image/png" href="images/myLogo.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK -->
+    
     <script type="module" src="firebase_init.js"></script>
-    <!-- 引入 jQuery (Toastr 的依賴) -->
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <!-- 引入 Toastr 用於提示訊息 -->
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- 引入 Leaflet 用於穴位圖互動地圖 -->
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- 自訂穴位地圖整合模組：包含座標資料與地圖初始化邏輯 -->
+    
     <script src="acupointIntegration.js"></script>
-    <!-- 引入 SweetAlert2 用於彈窗 -->
+    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
@@ -270,11 +270,11 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-green-50 to-blue-50 min-h-screen">
-    <!-- 語言切換器將放置於登入卡片內 -->
-    <!-- 登入頁面 -->
+    
+    
     <div id="loginPage" class="min-h-screen flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
-            <!-- 在登入卡片右上角放置語言切換器 -->
+            
             <div class="absolute top-2 right-2">
                 <select id="languageSelector" class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="zh">中文</option>
@@ -283,11 +283,11 @@
             </div>
             <div class="text-center mb-8">
                 <div class="text-4xl mb-4">
-                    <!-- 使用自定義 Logo 圖片取代原有的 Emoji -->
+                    
                     <img src="images/myLogo.png" alt="Logo" class="h-20 mx-auto">
                 </div>
                 <h1 id="loginTitle" class="text-2xl font-bold text-gray-800 mb-2">名醫診所系統</h1>
-                <!-- 更新預設診所英文名顯示為 Dr.Great Clinic -->
+                
                 <p id="loginEnglishTitle" class="text-sm text-gray-500 mb-3">Dr.Great Clinic</p>
                 <p class="text-gray-600">請輸入您的電子郵件及密碼登入</p>
             </div>
@@ -312,21 +312,21 @@
                 </button>
                 
             </div>
-            <!-- 登入頁面不再包含版權聲明，由全局頁腳統一呈現 -->
+            
         </div>
 
     </div>
-    <!-- 主系統頁面 -->
+    
     <div id="mainSystem" class="hidden fade-in">
-        <!-- 側邊選單 -->
+        
         <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out">
             <div class="flex flex-col h-full">
-                <!-- 選單標題 -->
+                
                 <div class="bg-green-600 text-white p-6">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
                             <span class="mr-3">
-                                <!-- 使用自定義 Logo 圖片取代原有的 Emoji -->
+                                
                                 <img src="images/myLogo.png" alt="Logo" class="h-6">
                             </span>
                             <h2 class="text-lg font-bold">診所功能</h2>
@@ -337,13 +337,13 @@
                     </div>
                     <div id="sidebarUserRole" class="text-sm text-green-100 mt-2"></div>
                 </div>
-                <!-- 功能選單項目 -->
+                
                 <div class="flex-1 py-4 overflow-y-auto">
                     <div id="sidebarMenu" class="space-y-2 px-4">
-                        <!-- 選單項目會動態生成 -->
+                        
                     </div>
                 </div>
-                <!-- 底部操作 -->
+                
                 <div class="border-t border-gray-200 p-4">
                     <button id="sidebarLogoutButton" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm transition duration-200 flex items-center justify-center">
                         <span class="mr-2">🚪</span>
@@ -417,9 +417,9 @@
                 </div>
             </div>
         </div>
-        <!-- 遮罩層 -->
+        
         <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
-        <!-- 頂部導航 -->
+        
         <nav class="bg-white shadow-lg border-b-4 border-green-500">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex justify-between items-center py-4">
@@ -432,7 +432,7 @@
                             </div>
                         </button>
                         <span class="mr-3">
-                            <!-- 使用自定義 Logo 圖片取代原有的 Emoji -->
+                            
                             <img src="images/myLogo.png" alt="Logo" class="h-6">
                         </span>
                         <div>
@@ -441,6 +441,10 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <span id="currentClinicDisplay" class="text-sm text-gray-600">當前診所：</span>
+                        <button id="clinicSwitchButton" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                            切換
+                        </button>
                         <span id="userRole" class="text-sm text-gray-600"></span>
                         <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
                             登出
@@ -449,13 +453,39 @@
                 </div>
             </div>
         </nav>
-        <!-- 主要內容區域 -->
-        <!-- 主要內容包裝區，新增 id 方便在顯示個人設置或模板庫時隱藏整個包裝 -->
+        
+        <div id="clinicSwitchModal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+            <div class="relative max-w-md mx-auto mt-24 bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">切換診所</h3>
+                <select id="currentClinicSelector" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>
+                <div class="flex justify-end space-x-2 mt-6">
+                    <button id="clinicSwitchCloseButton" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm transition duration-200">關閉</button>
+                    <button id="clinicSwitchConfirmButton" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">確定</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="globalLoadingOverlay" class="fixed inset-0 hidden" style="z-index: 60;">
+            <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+            <div class="relative max-w-md mx-auto mt-32 bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-base font-semibold mb-4 text-gray-800">正在載入資料</h3>
+                <div class="w-full bg-gray-200 rounded h-2 overflow-hidden">
+                    <div id="globalLoadingProgressBar" class="bg-indigo-500 h-2 rounded" style="width:0%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-3">
+                    <p id="globalLoadingText" class="text-sm text-gray-700">切換診所並載入所需資料…</p>
+                    <span id="globalLoadingPercent" class="text-sm text-gray-600">0%</span>
+                </div>
+            </div>
+        </div>
+        
+        
         <div id="contentWrapper" class="max-w-7xl mx-auto px-4 py-6">
-            <!-- 歡迎頁面 -->
+            
             <div id="welcomePage" class="text-center py-16">
                 <div class="text-6xl mb-6">
-                    <!-- 使用自定義 Logo 圖片取代原有的 Emoji -->
+                    
                     <img src="images/myLogo.png" alt="Logo" class="h-16 mx-auto">
                 </div>
                 <h2 id="welcomeTitle" class="text-3xl font-bold text-gray-800 mb-2">歡迎使用名醫診所系統</h2>
@@ -475,7 +505,7 @@
                             <div class="text-gray-600 mt-1">記錄症狀、診斷、開立處方</div>
                         </div>
                         <div class="text-center p-4 bg-purple-50 rounded-lg">
-                            <!-- 使用多人圖示代表診所用戶管理 -->
+                            
                             <div class="text-2xl mb-2">👥</div>
                             <div class="font-semibold">用戶管理</div>
                             <div class="text-gray-600 mt-1">管理診所用戶權限</div>
@@ -488,7 +518,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 病人資料管理 -->
+            
             <div id="patientManagement" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 class="text-2xl font-bold text-gray-800"> <span class="text-3xl mr-3">👥</span>病人資料管理</h2>
@@ -502,7 +532,7 @@
                         </button>
                     </div>
                 </div>
-                <!-- 新增/編輯病人表單彈窗 -->
+                
                 <div id="addPatientModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -533,7 +563,7 @@
                                     <input type="tel" id="patientPhone" placeholder="例：0912-345-678" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                 </div>
                                 <div>
-                                    <!-- 將身分證字號設為必填，並移除固定長度限制 -->
+                                    
                                     <label class="block text-sm font-medium text-gray-700 mb-1">身分證字號 *</label>
                                     <input type="text" id="patientIdCard" placeholder="例：A123456789" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                 </div>
@@ -566,7 +596,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 病人列表 -->
+                
                 <div class="overflow-x-auto">
                     <table class="w-full table-auto">
                         <thead class="bg-gray-100">
@@ -576,17 +606,17 @@
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">年齡</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">性別</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">電話</th>
-                                <!-- 新增建檔日期欄位，僅顯示日期不含時間 -->
+                                
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">建檔日期</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">操作</th>
                             </tr>
                         </thead>
                         <tbody id="patientList" class="divide-y divide-gray-200">
-                            <!-- 病人資料會動態載入 -->
+                            
                         </tbody>
                     </table>
                 </div>
-                <!-- 病人詳細資料彈窗 -->
+                
                 <div id="patientDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
@@ -594,11 +624,11 @@
                             <button onclick="closePatientDetail()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                         </div>
                         <div id="patientDetailContent" class="p-6">
-                            <!-- 詳細內容會動態載入 -->
+                            
                         </div>
                     </div>
                 </div>
-                <!-- 病人病歷查看彈窗 -->
+                
                 <div id="patientMedicalHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -607,27 +637,27 @@
                         </div>
                         
                         <div class="p-6">
-                            <!-- 病人基本資訊 -->
+                            
                             <div id="patientMedicalHistoryPatientInfo" class="bg-blue-50 rounded-lg p-4 mb-6">
-                                <!-- 病人資訊會動態載入 -->
+                                
                             </div>
                             
-                            <!-- 診症記錄列表 -->
+                            
                             <div id="patientMedicalHistoryContent">
-                                <!-- 診症記錄會動態載入 -->
+                                
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- 診症系統 -->
+            
             <div id="consultationSystem" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-gray-800"> <span class="text-3xl mr-3">🩺</span>掛號診症系統</h2>
                     <p class="text-gray-600 mt-2">簡潔的掛號流程管理</p>
                 </div>
                 
-                <!-- 病人搜索掛號 -->
+                
                 <div class="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 mb-6">
                     <div class="mb-4">
                         <h3 class="text-lg font-semibold text-gray-800 flex items-center mb-2">
@@ -648,16 +678,16 @@
                         </button>
                     </div>
                     
-                    <!-- 搜索結果 -->
+                    
                     <div id="patientSearchResults" class="mt-4 hidden">
                         <div class="bg-white rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
                             <div id="searchResultsList" class="divide-y divide-gray-200">
-                                <!-- 搜索結果會動態載入 -->
+                                
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- 掛號彈窗 -->
+                
                 <div id="registrationModal" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
                         <div class="bg-green-600 text-white px-6 py-4 rounded-t-xl">
@@ -668,14 +698,14 @@
                         </div>
                         
                         <div class="p-6 space-y-4">
-                            <!-- 選中的病人資訊 -->
+                            
                             <div class="bg-blue-50 rounded-lg p-4">
                                 <div class="flex items-center mb-2">
                                     <span class="mr-2">👤</span>
                                     <span class="font-semibold text-gray-700">病人資訊</span>
                                 </div>
                                 <div id="selectedPatientInfo" class="text-sm text-gray-600">
-                                    <!-- 病人資訊會動態載入 -->
+                                    
                                 </div>
                             </div>
                             
@@ -685,7 +715,7 @@
                                 </label>
                                 <select id="appointmentDoctor" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                     <option value="">請選擇醫師</option>
-                                    <!-- 醫師選項會動態載入 -->
+                                    
                                 </select>
                             </div>
                             
@@ -696,7 +726,7 @@
                                 <input type="datetime-local" id="appointmentDateTime" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                             </div>
 
-                            <!-- 問診資料選擇：允許醫師於掛號時選擇患者先前填寫的問診資料 -->
+                            
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <span class="mr-2">🧾</span><span>選擇問診資料</span>
@@ -725,12 +755,12 @@
                         </div>
                     </div>
                 </div>
-                <!-- 掛號列表 -->
+                
                 <div class="bg-white border border-gray-200 rounded-lg">
-                    <!-- 為掛號列表標題區塊添加唯一 ID，方便在 CSS 中針對窄螢幕進行排版調整 -->
+                    
                     <div id="registrationHeader" class="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
                         <div class="flex justify-between items-center">
-                            <!-- 左側：標題與日期選擇器 -->
+                            
                             <div class="flex items-center space-x-3">
                                 <h3 class="text-lg font-semibold text-gray-800 flex items-center">
                                     <span class="mr-2">📅</span><span>掛號列表</span>
@@ -744,9 +774,9 @@
                                     />
                                 </div>
                             </div>
-                            <!-- 右側：總計人數顯示 -->
+                            
                             <div class="text-sm text-gray-600 flex items-center space-x-3">
-                                <!-- 將標籤、數值和單位拆分為獨立元素，方便 i18n.js 處理翻譯 -->
+                                
                                 <span>總計：</span>
                                 <span id="todayTotal" class="font-semibold text-blue-600">0</span>
                                 <span>人</span>
@@ -769,13 +799,13 @@
                                     </tr>
                                 </thead>
                                 <tbody id="todayAppointmentsList" class="divide-y divide-gray-200">
-                                    <!-- 掛號列表會動態載入 -->
+                                    
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                <!-- 診症記錄查看彈窗 -->
+                
                 <div id="medicalHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -784,31 +814,28 @@
                         </div>
                         
                         <div class="p-6">
-                            <!-- 病人基本資訊 -->
+                            
                             <div id="medicalHistoryPatientInfo" class="bg-blue-50 rounded-lg p-4 mb-6">
-                                <!-- 病人資訊會動態載入 -->
+                                
                             </div>
                             
-                            <!-- 診症記錄列表 -->
+                            
                             <div id="medicalHistoryContent">
-                                <!-- 診症記錄會動態載入 -->
+                                
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- 診症表單區域 -->
+                
                 <div id="consultationForm" class="hidden bg-white border border-gray-200 rounded-lg mt-6">
                     <div class="bg-green-600 text-white px-6 py-4 rounded-t-lg">
                         <h3 class="text-xl font-bold">診症記錄</h3>
                     </div>
                     
                     <div class="p-6">
-                        <!-- 病人資訊 -->
+                        
                         <div class="bg-blue-50 rounded-lg p-4 mb-6">
-                            <!--
-                              將診症表單中的病人基本資訊區域擴充，加入年齡、性別、過敏史以及病史備註的顯示。
-                              其中過敏史與病史在無資料時會隱藏，其容器設置了對應的 ID 供 JavaScript 控制。
-                            -->
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                                 <div>
                                     <span class="font-medium">病人：</span>
@@ -826,12 +853,12 @@
                                     <span class="font-medium">掛號時間：</span>
                                     <span id="formAppointmentTime"></span>
                                 </div>
-                                <!-- 病史及備註：若無資料則隱藏 -->
+                                
                                 <div id="historyContainer" class="md:col-span-1 lg:col-span-2" style="display: none;">
                                     <span class="font-medium">病史及備註：</span>
                                     <span id="formPatientHistory" class="medical-field text-gray-700"></span>
                                 </div>
-                                <!-- 過敏史：以紅色高亮顯示，若無資料則隱藏 -->
+                                
                                 <div id="allergiesContainer" class="md:col-span-1 lg:col-span-2" style="display: none;">
                                     <span class="font-medium text-red-600">過敏史：</span>
                                     <span id="formPatientAllergies" class="medical-field text-red-700 bg-red-50 px-2 py-1 rounded"></span>
@@ -839,17 +866,17 @@
                             </div>
                         </div>
                         
-                        <!-- 診症表單 -->
+                        
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- 左側 -->
+                            
                             <div class="space-y-4">
                                 <div>
-                                    <!-- 在主訴欄位旁新增載入診斷模板按鈕 -->
+                                    
                                     <div class="flex justify-between items-center mb-2">
-                                        <!-- 調整主訴欄位標題為「主訴及現病史」以合併兩者的輸入 -->
+                                        
                                         <label class="block text-sm font-semibold text-gray-700">主訴及現病史 *</label>
-                                        <!-- 診斷模板按鈕：點擊後開啟診斷模板選擇彈窗 -->
-                                        <!-- 診斷模板載入按鈕：使用新的 openDiagnosisTemplate 包裝函式以顯示載入圈效果 -->
+                                        
+                                        
                                         <button
                                             type="button"
                                             onclick="openDiagnosisTemplate(event)"
@@ -858,16 +885,16 @@
                                             🔍 載入診斷模板
                                         </button>
                                     </div>
-                                    <!-- 主訴及現病史輸入區：維持原有的 textarea ID 以相容既有程式邏輯 -->
+                                    
                                     <textarea id="formSymptoms" placeholder="病人主要不適症狀、發病時間、症狀特點、治療經過等..." rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
                                 </div>
 
-                                <!-- 過往記錄欄位：顯示歷次診症的主訴及現病史，供醫師參考，禁止編輯 -->
+                                
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                                         過往記錄
                                     </label>
-                                    <!-- 使用原有的 formCurrentHistory ID 以便程式存取，但設為唯讀並以灰底顯示 -->
+                                    
                                     <textarea id="formCurrentHistory" readonly placeholder="過往主訴及現病史將自動載入" rows="6" class="w-full border border-gray-200 bg-gray-100 rounded-lg px-3 py-2 text-gray-600"></textarea>
                                 </div>
                                 
@@ -905,36 +932,36 @@
                                         <label class="block text-sm font-semibold text-gray-700">針灸備註</label>
                                         <button type="button" onclick="openAcupointCombo(event)" class="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition duration-200">📍 載入常用穴位</button>
                                     </div>
-                                    <!-- 搜索穴位並添加至針灸備註 -->
+                                    
                                         <div class="mb-3 bg-blue-50 rounded-lg p-3 border border-blue-200">
                                             <div class="flex items-center mb-2">
                                                 <span class="text-sm font-medium text-blue-800 mr-2">🔍 搜索穴位：</span>
                                                 <div class="flex-1 relative">
-                                                    <input type="text" id="acupointNotesSearch" placeholder="搜尋穴位名稱、經絡或定位..." 
+                                                    <input type="text" id="acupointNotesSearch" placeholder="搜尋穴位名稱、經絡、定位或國際代碼..." 
                                                            class="w-full border border-blue-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                            oninput="searchAcupointForNotes()">
                                                     <button type="button" onclick="clearAcupointNotesSearch()" class="absolute right-2 top-1 text-gray-400 hover:text-gray-600 text-sm">×</button>
                                                 </div>
-                                                <!-- 新增穴位圖按鈕：開啟穴位地圖以選取穴位 -->
+                                                
                                                 <button type="button" onclick="openAcupointMapForNotes()" class="ml-2 text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition duration-200">🗺️ 穴位圖</button>
                                             </div>
-                                        <!-- 搜索結果 -->
+                                        
                                         <div id="acupointNotesSearchResults" class="hidden">
                                             <div class="bg-white rounded border border-blue-200 max-h-40 overflow-y-auto">
                                                 <div id="acupointNotesSearchList" class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
-                                                    <!-- 搜索結果會動態載入 -->
+                                                    
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- 針灸備註輸入區，使用 contenteditable 以便嵌入穴位方塊 -->
+                                    
                                     <div id="formAcupunctureNotes" contenteditable="true" data-placeholder="針灸穴位、手法、注意事項等..."
                                          class="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"></div>
                                 </div>
                             </div>
 
                             
-                            <!-- 右側 -->
+                            
                             <div class="space-y-4">
                                 
                                 <div>
@@ -956,7 +983,7 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- 中藥庫搜索區域 -->
+                                    
                                     <div class="mb-3 bg-yellow-50 rounded-lg p-3 border border-yellow-200">
                                         <div class="flex items-center mb-2">
                                             <span class="text-sm font-medium text-yellow-800 mr-2">🔍 搜索中藥庫：</span>
@@ -969,27 +996,27 @@
                                             <div id="singlePrescriptionModeContainer" class="ml-2"></div>
                                         </div>
                                         
-                                        <!-- 搜索結果 -->
+                                        
                                         <div id="prescriptionSearchResults" class="hidden">
                                             <div class="bg-white rounded border border-yellow-200 max-h-48 overflow-y-auto">
                                                 <div id="prescriptionSearchList" class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
-                                                    <!-- 搜索結果會動態載入 -->
+                                                    
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- 多處方容器 -->
+                                    
                                     <div id="prescriptionsContainer" class="space-y-4"></div>
-                                    <!-- 禁忌配伍提示區域（顯示目前編輯的處方的錯誤） -->
+                                    
                                     <div id="prescriptionError" class="mt-2 text-sm text-red-600 hidden"></div>
                                     
                                     
-                                    <!-- 隱藏的文本域用於存儲處方內容 -->
+                                    
                                     <textarea id="formPrescription" class="hidden"></textarea>
                                 </div>
                                 
-                                <!-- 將原本的「服用方法」欄位移至療程上方，並改名為「中藥服用方法」 -->
+                                
 
                                 
                                 <div>
@@ -1003,7 +1030,7 @@
                                         </button>
                                     </div>
                                     
-                                    <!-- 收費項目搜索區域 -->
+                                    
                                     <div class="mb-3 bg-green-50 rounded-lg p-3 border border-green-200">
                                         <div class="flex items-center mb-2">
                                             <span class="text-sm font-medium text-green-800 mr-2">💰 選擇收費項目：</span>
@@ -1015,17 +1042,17 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- 搜索結果 -->
+                                        
                                         <div id="billingSearchResults" class="hidden">
                                             <div class="bg-white rounded border border-green-200 max-h-48 overflow-y-auto">
                                                 <div id="billingSearchList" class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
-                                                    <!-- 搜索結果會動態載入 -->
+                                                    
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- 已選擇的收費項目 -->
+                                    
                                     <div class="border border-gray-300 rounded-lg p-3 min-h-[80px] bg-gray-50">
                                         <div id="selectedBillingItems" class="space-y-2">
                                             <div class="text-sm text-gray-500 text-center py-4">
@@ -1034,15 +1061,15 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- 總費用顯示 -->
+                                    
                                     <div class="mt-2 text-right">
                                         <span class="text-sm font-medium text-gray-700">總費用：</span>
                                         <span id="totalBillingAmount" class="text-lg font-bold text-green-600">$0</span>
                                     </div>
                                     
-                                    <!-- 隱藏的文本域用於存儲收費項目 -->
+                                    
                                     <textarea id="formBillingItems" class="hidden"></textarea>
-                                    <!-- 病人套票管理 -->
+                                    
                                     <div class="mt-4 border border-purple-200 rounded-lg p-3 bg-purple-50">
                                       <div class="flex items-center justify-between mb-2">
                                         <div class="text-sm font-semibold text-purple-800">🎫 病人套票</div>
@@ -1050,19 +1077,19 @@
                                                 class="text-xs px-2 py-1 bg-purple-600 text-white rounded">刷新</button>
                                       </div>
                                       <div id="patientPackagesList" class="space-y-2 text-sm text-gray-700">
-                                        <!-- 動態載入 -->
+                                        
                                         <div class="text-gray-500">尚未載入或無套票</div>
                                       </div>
                                     </div>
                                 </div>
                                 
-                                <!-- 新增「中藥服用方法」欄位，移到療程欄位上方 -->
+                                
                                 <div>
-                                    <!-- 在中藥服用方法欄位旁新增載入醫囑模板按鈕 -->
+                                    
                                     <div class="flex justify-between items-center mb-2">
                                         <label class="block text-sm font-semibold text-gray-700">中藥服用方法</label>
-                                        <!-- 醫囑模板按鈕：點擊後開啟醫囑模板選擇彈窗 -->
-                                        <!-- 醫囑模板載入按鈕：使用新的 openPrescriptionTemplate 包裝函式以顯示載入圈效果 -->
+                                        
+                                        
                                         <button
                                             type="button"
                                             onclick="openPrescriptionTemplate(event)"
@@ -1090,7 +1117,7 @@
                             </div>
                         </div>
                         
-                        <!-- 複診時間及其他時間設定 -->
+                        
                         <div class="mt-6 pt-4 border-t border-gray-200">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -1131,7 +1158,7 @@
                             </div>
                         </div>
                         
-                        <!-- 操作按鈕 -->
+                        
                         <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                             <button onclick="cancelConsultation()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition duration-200">
                                 取消診症
@@ -1143,7 +1170,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 中藥庫 -->
+            
             <div id="herbLibrary" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 class="text-2xl font-bold text-gray-800"> <span class="text-3xl mr-3">🌿</span>中藥庫</h2>
@@ -1152,12 +1179,12 @@
                             <input type="text" id="searchHerb" placeholder="搜尋中藥材、方劑名稱或功能..." class="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-green-500 focus:border-transparent w-full md:w-64">
                             <span class="absolute right-3 top-2.5 text-gray-400">🔍</span>
                         </div>
-                        <!-- 庫存類型選擇：顆粒沖劑/飲片 -->
+                        
                         <select id="inventoryTypeSelect" onchange="onInventoryTypeChange(this.value)" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent w-full md:w-auto">
                             <option value="granule">顆粒沖劑</option>
                             <option value="slice">飲片</option>
                         </select>
-                        <!-- 批量入庫按鈕：允許一次為多個中藥增加庫存 -->
+                        
                         <button id="batchInventoryBtn" onclick="openBatchInventoryModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
                             <span id="batchInventoryBtnText">批量入庫</span>
                         </button>
@@ -1166,7 +1193,7 @@
                         </button>
                     </div>
                 </div>
-                <!-- 分類標籤 -->
+                
                 <div class="mb-6">
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="filterHerbLibrary('all')" id="filter-all" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 transition duration-200">
@@ -1178,7 +1205,7 @@
                         <button onclick="filterHerbLibrary('formula')" id="filter-formula" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition duration-200">
                             方劑
                         </button>
-                        <!-- 新增已停用的分類按鈕，預設樣式與其他分類一致 -->
+                        
                         <button onclick="filterHerbLibrary('disabled')" id="filter-disabled" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition duration-200">
                             已停用
                         </button>
@@ -1186,13 +1213,13 @@
                             <option value="">排序方式</option>
                             <option value="most">庫存最多</option>
                             <option value="least">庫存最少</option>
-                            <!-- 新增使用次數排序選項 -->
+                            
                             <option value="useMost">使用最多</option>
                             <option value="useLeast">使用最少</option>
                         </select>
                     </div>
                 </div>
-                <!-- 新增/編輯中藥材表單彈窗 -->
+                
                 <div id="addHerbModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -1210,7 +1237,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">別名</label>
                                     <input type="text" id="herbAlias" placeholder="其他名稱或別名" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                 </div>
-                                <!-- 新增性味與歸經欄位 -->
+                                
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">性味</label>
                                     <input type="text" id="herbNature" placeholder="例：辛、溫" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
@@ -1223,7 +1250,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">功效</label>
                                     <textarea id="herbEffects" placeholder="請描述主要功效" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"></textarea>
                                 </div>
-                                <!-- 新增主治欄位 -->
+                                
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">主治</label>
                                     <textarea id="herbIndications" placeholder="請描述主治" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"></textarea>
@@ -1236,7 +1263,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">使用注意</label>
                                     <input type="text" id="herbCautions" placeholder="禁忌或注意事項" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                 </div>
-                                <!-- 新增庫存量與警戒量欄位 -->
+                                
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">存庫量 (g)</label>
                                     <input type="number" id="herbStock" placeholder="請輸入存庫量" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent" min="0" step="0.5">
@@ -1258,7 +1285,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 新增/編輯方劑表單彈窗 -->
+                
                 <div id="addFormulaModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -1292,7 +1319,7 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-1">注意事項</label>
                                         <textarea id="formulaCautions" placeholder="禁忌、注意事項等" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
                                     </div>
-                                    <!-- 新增主治與用法欄位 -->
+                                    
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">主治</label>
                                         <textarea id="formulaIndications" placeholder="請描述方劑主治" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
@@ -1301,7 +1328,7 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-1">用法</label>
                                         <textarea id="formulaUsage" placeholder="請描述方劑用法" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
                                     </div>
-                                    <!-- 新增庫存量與警戒量欄位 -->
+                                    
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">存庫量 (g)</label>
                                         <input type="number" id="formulaStock" placeholder="請輸入存庫量" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" step="0.5">
@@ -1324,7 +1351,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 庫存編輯彈窗 -->
+                
                 <div id="inventoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
                         <div class="p-6">
@@ -1332,7 +1359,7 @@
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">剩餘數量</label>
-                                    <!-- 將輸入框與單位下拉改為響應式：手機垂直排列，桌面橫向排列 -->
+                                    
                                     <div class="flex flex-col sm:flex-row items-center">
                                         <input type="number" id="inventoryQuantity" class="w-full flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" step="0.5">
                                         <select id="inventoryQuantityUnit" class="mt-2 sm:mt-0 sm:ml-2 border border-gray-300 rounded px-2 py-2 text-sm">
@@ -1346,15 +1373,15 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">補貨警戒量</label>
                                     <div class="flex items-center">
-                                        <!-- 讓輸入框在小螢幕時佔滿整行，避免超出右邊邊框 -->
+                                        
                                         <input type="number" id="inventoryThreshold" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" step="0.5">
                                     </div>
                                 </div>
-                                <!-- 新增啟用/停用選擇 -->
+                                
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
                                     <select id="inventoryDisabled" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                        <!-- 預設為啟用 (false)，表示此藥材仍會出現在處方搜尋中 -->
+                                        
                                         <option value="false">啟用</option>
                                         <option value="true">停用</option>
                                     </select>
@@ -1367,17 +1394,17 @@
                         </div>
                     </div>
                 </div>
-                <!-- 批量入庫彈窗 -->
+                
                 <div id="batchInventoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="p-6">
-                            <!-- 批量入庫標題與類型選擇 -->
+                            
                             <div class="flex justify-between items-center mb-4">
                                 <h3 id="batchInventoryModalTitle" class="text-xl font-bold">批量入庫</h3>
-                                <!-- 顯示當前庫存類型：顆粒沖劑或飲片，僅供查看，不能在此切換 -->
+                                
                                 <span id="batchInventoryTypeDisplay" class="px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"></span>
                             </div>
-                            <!-- 此區域將動態添加多個批量入庫行 -->
+                            
                             <div id="batchRows" class="space-y-2"></div>
                             <button type="button" onclick="addBatchRow()" class="mt-2 bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded">
                                 + 新增藥材
@@ -1389,13 +1416,13 @@
                         </div>
                     </div>
                 </div>
-                <!-- 中藥庫列表 -->
+                
                 <div class="overflow-x-auto">
                     <div id="herbLibraryList" class="space-y-4">
-                        <!-- 中藥庫內容會動態載入 -->
+                        
                     </div>
                 </div>
-                <!-- 進出貨記錄彈窗 -->
+                
                 <div id="inventoryHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="p-6">
@@ -1418,44 +1445,44 @@
                 </div>
             </div>
 
-            <!-- 穴位庫 -->
+            
             <div id="acupointLibrary" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 class="text-2xl font-bold text-gray-800"> <span class="text-3xl mr-3">📌</span>穴位庫</h2>
                     <div class="flex flex-col md:flex-row gap-3">
                         <div class="relative">
-                            <input type="text" id="searchAcupoint" placeholder="搜尋穴位、經絡名稱或功能..." class="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64">
+                            <input type="text" id="searchAcupoint" placeholder="搜尋穴位、經絡、功能或國際代碼..." class="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64">
                             <span class="absolute right-3 top-2.5 text-gray-400">🔍</span>
                         </div>
                     </div>
                 </div>
-                <!-- 分類標籤 -->
+                
                 <div class="mb-6">
                     <div id="acupointFilterContainer" class="flex flex-wrap gap-2">
-                        <!-- 動態產生的經絡分類按鈕 -->
+                        
                     </div>
                 </div>
-    <!-- 穴位圖示展示區 -->
+    
     <div class="mb-6">
-        <!-- 使用 relative 容器以配合放大鏡絕對定位 -->
-        <!-- 調整容器寬度使穴位圖的邊框能填滿整個卡片 -->
+        
+        
         <div id="acupointImageContainer" class="relative w-full">
-            <!-- 取代傳統圖片為 Leaflet 地圖容器，後續由 JS 載入圖片並繪製標記 -->
-            <!-- 將邊框加粗，使穴位圖的框線與卡片邊界一致 -->
-            <!-- 調整高度為 40rem，以便完整呈現穴位圖比例 -->
-            <!-- 移除固定高度 h-[40rem]，改由 CSS aspect-ratio 控制尺寸 -->
+            
+            
+            
+            
             <div id="acupointMap" class="w-full border-2 border-gray-300 rounded-lg shadow-sm"></div>
         </div>
     </div>
-                <!-- 穴位庫列表 -->
+                
                 <div class="overflow-x-auto">
                     <div id="acupointLibraryList" class="space-y-4">
-                        <!-- 穴位庫內容會動態載入 -->
+                        
                     </div>
                 </div>
             </div>
 
-            <!-- 收費項目管理 -->
+            
             <div id="billingManagement" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 class="text-2xl font-bold text-gray-800"> <span class="text-3xl mr-3">💰</span>收費項目管理</h2>
@@ -1469,7 +1496,7 @@
                         </button>
                     </div>
                 </div>
-                <!-- 分類標籤 -->
+                
                 <div class="mb-6">
                     <div class="flex flex-wrap gap-2">
                         <button onclick="filterBillingItems('all')" id="billing-filter-all" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 transition duration-200">
@@ -1495,7 +1522,7 @@
                         </button>
                     </div>
                 </div>
-                <!-- 新增/編輯收費項目表單彈窗 -->
+                
                 <div id="addBillingItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -1521,7 +1548,7 @@
                                         <option value="package">套票項目</option>
                                     </select>
                                 </div>
-                                <!-- 套票專用欄位：當類別選擇 package 時顯示 -->
+                                
                                 <div id="packageFields" class="md:col-span-2 hidden">
                                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -1551,10 +1578,16 @@
                                     <textarea id="billingItemDescription" placeholder="請描述收費項目的詳細內容" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"></textarea>
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="billingItemActive" checked class="mr-2 rounded">
-                                        <span class="text-sm font-medium text-gray-700">啟用此收費項目</span>
-                                    </label>
+                                    <div class="flex items-center gap-6">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="billingItemActive" checked class="mr-2 rounded">
+                                            <span class="text-sm font-medium text-gray-700">啟用此收費項目</span>
+                                        </label>
+                                        <label class="flex items-center" title="勾選後此項目將供所有診所使用">
+                                            <input type="checkbox" id="billingItemShared" class="mr-2 rounded">
+                                            <span class="text-sm font-medium text-gray-700">診所共用項目</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1569,18 +1602,18 @@
                         </div>
                     </div>
                 </div>
-                <!-- 收費項目列表 -->
+                
                 <div class="overflow-x-auto">
                     <div id="billingItemsList" class="space-y-4">
-                        <!-- 收費項目內容會動態載入 -->
+                        
                     </div>
                 </div>
             </div>
-            <!-- 診所用戶管理 -->
+            
             <div id="userManagement" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                        <!-- 使用單人圖示代表診所用戶管理 -->
+                        
                         <span class="text-3xl mr-3">👤</span>
                         診所用戶管理
                     </h2>
@@ -1594,7 +1627,7 @@
                         </button>
                     </div>
                 </div>
-                <!-- 狀態篩選標籤 -->
+                
                 <div class="mb-6">
                     <div class="flex flex-wrap gap-2">
                         <button onclick="filterUsers('all')" id="user-filter-all" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 transition duration-200">
@@ -1605,7 +1638,7 @@
                         </button>
                     </div>
                 </div>
-                <!-- 新增/編輯用戶表單彈窗 -->
+                
                 <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -1642,14 +1675,14 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">電話號碼</label>
                                     <input type="tel" id="userPhone" placeholder="請輸入電話號碼" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                 </div>
-                                <!-- Firebase UID 欄位 -->
+                                
                                 <div id="uidField">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Firebase UID</label>
                                     <input type="text" id="userUID" placeholder="請輸入 Firebase UID（可不填）" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                     <p class="text-xs text-gray-500 mt-1">對應 Firebase Authentication 帳號的 UID</p>
                                 </div>
 
-        <!-- 初始密碼與確認密碼欄位，僅新增用戶時顯示 -->
+        
         <div id="passwordFields" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">初始密碼 *</label>
@@ -1673,7 +1706,7 @@
                                 <button onclick="hideAddUserForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition duration-200">
                                     取消
                                 </button>
-                                <!-- 為用戶儲存按鈕增加 id，便於顯示讀取圈 -->
+                                
                                 <button id="userSaveButton" onclick="saveUser()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition duration-200">
                                     <span id="userSaveButtonText">儲存</span>
                                 </button>
@@ -1681,7 +1714,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 用戶列表 -->
+                
                 <div class="overflow-x-auto">
                     <table class="w-full table-auto">
                         <thead class="bg-gray-100">
@@ -1696,12 +1729,12 @@
                             </tr>
                         </thead>
                         <tbody id="userList" class="divide-y divide-gray-200">
-                            <!-- 用戶資料會動態載入 -->
+                            
                         </tbody>
                     </table>
                 </div>
             </div>
-<!-- 財務報表 -->
+
             <div id="financialReports" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2 flex items-center">
@@ -1709,7 +1742,7 @@
                     </h2>
                     <p class="text-gray-600">診所收入分析與財務統計</p>
                 </div>
-                <!-- 篩選控制區 -->
+                
                 <div class="bg-gray-50 rounded-lg p-4 mb-6 relative">
                     <div class="absolute top-4 right-4 space-y-2 flex flex-col items-end">
                         <button onclick="showExpenseImportModal()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
@@ -1750,9 +1783,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">醫師篩選</label>
-                            <select id="doctorFilter" onchange="generateFinancialReport()" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="">全部醫師</option>
-                            </select>
+                            <div class="flex gap-4">
+                                <select id="doctorFilter" onchange="generateFinancialReport()" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                    <option value="">全部醫師</option>
+                                </select>
+                                <select id="clinicFilterFinancial" onchange="generateFinancialReport()" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                    <option value="">全部診所</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="flex items-end space-x-2">
@@ -1765,7 +1803,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 關鍵指標卡片 -->
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <div class="bg-gradient-to-r from-green-400 to-green-600 text-white rounded-xl p-6 shadow-lg transform hover:scale-105 transition duration-200">
                         <div class="flex items-center justify-between">
@@ -1819,7 +1857,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 詳細報表 -->
+                
                 <div class="bg-white border border-gray-200 rounded-lg">
                     <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
                         <div class="flex justify-between items-center">
@@ -1827,14 +1865,14 @@
                                 <span class="mr-2">📋</span><span>詳細財務報表</span>
                             </h3>
                             <div class="text-sm text-gray-600 flex items-center space-x-1">
-                                <!-- 將標籤與時間拆分，使多語系翻譯可以套用 -->
+                                
                                 <span>資料更新時間：</span>
                                 <span id="lastUpdateTime">-</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- 標籤頁 -->
+                    
                     <div class="border-b border-gray-200">
                         <nav class="flex space-x-8 px-6" role="tablist">
                             <button onclick="switchFinancialTab('summary')" id="financialSummaryTab" class="py-4 px-1 border-b-2 border-green-500 text-green-600 font-medium text-sm transition duration-200">
@@ -1852,9 +1890,9 @@
                         </nav>
                     </div>
                     
-                    <!-- 標籤內容 -->
+                    
                     <div class="p-6">
-                        <!-- 收入摘要標籤 -->
+                        
                         <div id="financialSummaryContent" class="financial-tab-content">
                             <div class="overflow-x-auto">
                                 <table class="w-full">
@@ -1877,7 +1915,7 @@
                             </div>
                         </div>
                         
-                        <!-- 每日明細標籤 -->
+                        
                         <div id="financialDailyContent" class="financial-tab-content hidden">
                             <div class="overflow-x-auto">
                                 <table class="w-full">
@@ -1901,7 +1939,7 @@
                             </div>
                         </div>
                         
-                        <!-- 醫師業績標籤 -->
+                        
                         <div id="financialDoctorContent" class="financial-tab-content hidden">
                             <div class="overflow-x-auto">
                                 <table class="w-full">
@@ -1925,7 +1963,7 @@
                             </div>
                         </div>
                         
-                        <!-- 服務分析標籤 -->
+                        
                         <div id="financialServiceContent" class="financial-tab-content hidden">
                             <div class="overflow-x-auto">
                                 <table class="w-full">
@@ -1951,7 +1989,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 系統管理 -->
+            
             <div id="systemManagement" class="hidden bg-white rounded-xl shadow-lg p-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6"> <span class="text-3xl mr-3">⚙️</span>系統管理</h2>
                 
@@ -1959,8 +1997,8 @@
 
 <div class="bg-gray-50 rounded-lg p-6">
     <h3 class="text-lg font-semibold mb-4">資料備份與還原</h3>
-    <!-- 說明備份內容：模板庫、中藥庫及穴位庫不包含在匯出備份中 -->
-    <p class="text-sm text-gray-600 mb-4">您可以匯出診所資料備份（包含所有功能資料，不含模板庫、中藥庫及穴位庫），或匯入之前的備份檔案。實時掛號及問診資料不包含在備份中。</p>
+    
+    <p class="text-sm text-gray-600 mb-4">您可以匯出診所資料備份（包含所有功能資料，不含模板庫及穴位庫），或匯入之前的備份檔案。實時掛號及問診資料不包含在備份中。</p>
     <div class="flex flex-col md:flex-row gap-4">
         <button id="backupExportBtn" onclick="exportClinicBackup()" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200">
             匯出備份
@@ -1970,7 +2008,7 @@
         </button>
         <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="handleBackupFile(this.files[0])">
     </div>
-    <!-- 匯入進度條 -->
+    
     <div id="backupProgressContainer" class="hidden mt-4">
         <div class="w-full bg-gray-200 rounded-full h-2.5">
             <div id="backupProgressBar" class="bg-blue-600 h-2.5 rounded-full" style="width:0%"></div>
@@ -1984,7 +2022,7 @@
                         <div class="space-y-3">
                             <div class="text-center py-4" id="clinicSettingsDisplay">
                                 <div class="text-sm text-gray-700 mb-3">
-                                    <!-- 將標籤與值拆分為不同的元素，以便 i18n.js 處理翻譯 -->
+                                    
                                     <div class="font-medium flex items-center space-x-1">
                                         <span>診所中文名稱：</span><span id="displayChineseName">名醫診所系統</span>
                                     </div>
@@ -1999,13 +2037,13 @@
                         </div>
                     </div>
 
-                    <!-- 新增訂閱與付款管理卡片 -->
+                    
                     <div class="bg-gray-50 rounded-lg p-6">
                         <h3 class="text-lg font-semibold mb-4">訂閱與付款</h3>
-                        <!-- 說明文字將由 i18n.js 進行多語翻譯 -->
+                        
                         <p class="text-sm text-gray-600 mb-4">您可以查看並管理系統訂閱或付款狀態。</p>
                         <div class="flex flex-col md:flex-row gap-4">
-                            <!-- 修改：直接開啟訂閱與付款的 Stripe 登入頁面 -->
+                            
                             <button id="manageBillingBtn" onclick="window.open('https://billing.stripe.com/p/login/00w00l9Sk5I98irfdLcjS00', '_blank')" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition duration-200">
                                 管理訂閱/付款
                             </button>
@@ -2016,14 +2054,13 @@
                 </div>
             </div>
         </div>
-        <!-- 個人設置與模板庫內容 -->
-        <!-- 個人設置區：在外層加入與其他頁面一致的寬度與內邊距容器，卡片樣式位於內層 -->
-        <!-- 個人設置區：包裝在與其他頁面相同的寬度限制與內外邊距容器中，使版面保持一致 -->
-        <!-- 病歷管理 -->
-        <!-- 將病歷管理區外層調整為與其他版面一致的寬度限制與內外邊距，
-             將原本的白色卡片樣式移至內層，讓外層有左右留白空間 -->
+        
+        
+        
+        
+        
         <div id="medicalRecordManagement" class="hidden max-w-7xl mx-auto px-4 py-6">
-            <!-- 將整個病歷管理內文字縮小一級，採用 text-sm 作為基準字級 -->
+            
             <div class="bg-white rounded-xl shadow-lg p-6 text-sm">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 class="text-2xl font-bold text-gray-800"><span class="text-3xl mr-3">📋</span>病歷管理</h2>
@@ -2035,13 +2072,14 @@
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <!-- 列表容器：用於插入分頁控制 -->
+                
                 <div id="medicalRecordList">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <!-- 將表頭字體與大小調整為與其他版面一致，使用 text-sm、font-semibold，移除 uppercase 與 tracking-wider -->
+                                
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700">病歷編號</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700">診所</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700">病人姓名</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700">主訴</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700">醫師</th>
@@ -2051,8 +2089,8 @@
                         </thead>
                         <tbody id="medicalRecordTableBody" class="divide-y divide-gray-200">
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                    <!-- 內容將由 JavaScript 動態填充 -->
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                    
                                 </td>
                             </tr>
                         </tbody>
@@ -2060,49 +2098,49 @@
                 </div>
             </div>
             <div id="medicalRecordPagination" class="mt-4 flex justify-center hidden"></div>
-            </div><!-- 內層卡片結束 -->
+            </div>
         </div>
 
-        <!-- 病歷詳細資訊彈窗 -->
+        
         <div id="medicalRecordDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-            <!-- 調整彈窗寬度以與病人資料管理的病歷查看保持一致，從 max-w-3xl 改為 max-w-6xl -->
+            
             <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                 <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
                     <h3 class="text-xl font-bold text-gray-800">病歷詳細資訊</h3>
                     <button onclick="closeMedicalRecordDetail()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                 </div>
                 <div id="medicalRecordDetailContent" class="p-6 space-y-4">
-                    <!-- 病歷詳細內容將由 JavaScript 動態填充 -->
+                    
                 </div>
             </div>
         </div>
 
         <div id="personalSettings" class="hidden max-w-7xl mx-auto px-4 py-6">
           <div class="bg-white rounded-xl shadow-lg p-6">
-            <!-- 移除內層多餘的背景框，避免重複包裹 -->
+            
             <div>
             <h2 class="text-2xl font-bold text-amber-800 mb-6 flex items-center">
               <span class="text-3xl mr-3">🔧</span>
               個人設置
             </h2>
             
-            <!-- 標籤切換 -->
+            
             <div class="mb-6">
               <div class="flex border-b border-gray-200">
                 <button class="px-6 py-3 text-amber-700 border-b-2 border-amber-500 font-medium" onclick="switchPersonalTab('herbs')" id="herbsTab">
                   🌿 慣用中藥組合
-                  <!-- 動態顯示慣用中藥組合數量 -->
+                  
                   <span id="herbCount" class="ml-2 text-xs font-semibold bg-green-100 text-green-700 rounded-full px-2 py-0.5"></span>
                 </button>
                 <button class="px-6 py-3 text-gray-500 hover:text-amber-700 font-medium" onclick="switchPersonalTab('acupoints')" id="acupointsTab">
                   📍 慣用穴位組合
-                  <!-- 動態顯示慣用穴位組合數量 -->
+                  
                   <span id="acupointCount" class="ml-2 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full px-2 py-0.5"></span>
                 </button>
               </div>
             </div>
 
-            <!-- 中藥組合內容 -->
+            
             <div id="herbsContent" class="personal-tab-content">
               <div class="mb-6 space-y-4">
                 <div class="flex gap-4 flex-wrap">
@@ -2114,7 +2152,7 @@
                   </button>
                 </div>
                 <div class="flex gap-4 flex-wrap">
-                  <!-- 個人慣用中藥組合：底層搜尋欄與分類篩選 -->
+                  
                   <input id="herbComboSearchInput" type="text" placeholder="搜尋藥方組合名稱..." class="px-4 py-2 border-2 border-green-200 rounded-lg focus:border-green-400 focus:outline-none flex-1 min-w-64">
                   <select id="herbComboCategoryFilter" class="px-4 py-2 border-2 border-green-200 rounded-lg focus:border-green-400 focus:outline-none">
                     <option>全部分類</option>
@@ -2124,15 +2162,15 @@
                     <option>補益類</option>
                     <option>清熱類</option>
                   </select>
-                  <!-- 移除使用頻率篩選下拉選單 -->
+                  
                 </div>
               </div>
               <div class="grid md:grid-cols-2 gap-6" id="herbCombinationsContainer">
-                <!-- 動態載入中藥組合 -->
+                
               </div>
             </div>
 
-            <!-- 穴位組合內容 -->
+            
             <div id="acupointsContent" class="personal-tab-content hidden">
               <div class="mb-6 space-y-4">
                 <div class="flex gap-4 flex-wrap">
@@ -2144,7 +2182,7 @@
                   </button>
                 </div>
                 <div class="flex gap-4 flex-wrap">
-                  <!-- 個人慣用穴位組合：底層搜尋欄與分類篩選 -->
+                  
                   <input id="acupointComboSearchInput" type="text" placeholder="搜尋穴位組合名稱..." class="px-4 py-2 border-2 border-blue-200 rounded-lg focus:border-blue-400 focus:outline-none flex-1 min-w-64">
                   <select id="acupointComboCategoryFilter" class="px-4 py-2 border-2 border-blue-200 rounded-lg focus:border-blue-400 focus:outline-none">
                     <option>全部分類</option>
@@ -2165,14 +2203,14 @@
                 </div>
               </div>
               <div class="grid md:grid-cols-2 gap-6" id="acupointCombinationsContainer">
-                <!-- 動態載入穴位組合 -->
+                
               </div>
             </div>
             </div>
           </div>
         </div>
 
-        <!-- 個人統計分析區：包裝在與其他頁面相同的寬度限制與內外邊距容器中，統計醫師個人用藥與穴位偏好 -->
+        
         <div id="personalStatistics" class="hidden max-w-7xl mx-auto px-4 py-6">
           <div class="bg-white rounded-xl shadow-lg p-6">
             <div>
@@ -2181,33 +2219,36 @@
                 <span class="text-3xl mr-3">📈</span>
                 個人統計分析
               </h2>
-              <div>
+              <div class="flex items-center gap-2">
+                <select id="personalStatsClinicSelect" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option value="ALL">全部診所</option>
+                </select>
                 <select id="personalStatsMonthSelect" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
                   <option value="ALL">全部月份</option>
                 </select>
               </div>
             </div>
-            <!-- 說明文字：指引使用者此功能用途 -->
+            
             <p class="text-gray-600 mb-6">統計醫師個人用藥與穴位使用情況，提供用藥和穴位偏好分析。</p>
-            <!-- 依序排列：方劑在上，中藥在下，穴位置底。每個卡片內部使用二欄佈局：圖表與列表並列 -->
+            
             <div class="space-y-8">
-              <!-- 常用方劑統計區塊 -->
+              
               <div class="bg-gray-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <span class="mr-2">📋</span>常用方劑
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  <!-- 圖表 -->
+                  
                   <div>
                     <canvas id="personalFormulaChart" class="w-full h-60"></canvas>
                   </div>
-                  <!-- 清單 -->
+                  
                   <ul id="personalFormulaList" class="divide-y divide-gray-200 text-sm">
-                    <!-- 動態載入方劑統計 -->
+                    
                   </ul>
                 </div>
               </div>
-              <!-- 常用中藥統計區塊 -->
+              
               <div class="bg-gray-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <span class="mr-2">🌿</span>常用中藥
@@ -2217,11 +2258,11 @@
                     <canvas id="personalHerbChart" class="w-full h-60"></canvas>
                   </div>
                   <ul id="personalHerbList" class="divide-y divide-gray-200 text-sm">
-                    <!-- 動態載入中藥統計 -->
+                    
                   </ul>
                 </div>
               </div>
-              <!-- 常用穴位統計區塊 -->
+              
               <div class="bg-gray-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <span class="mr-2">📍</span>常用穴位
@@ -2231,7 +2272,7 @@
                     <canvas id="personalAcupointChart" class="w-full h-60"></canvas>
                   </div>
                   <ul id="personalAcupointList" class="divide-y divide-gray-200 text-sm">
-                    <!-- 動態載入穴位統計 -->
+                    
                   </ul>
                 </div>
               </div>
@@ -2240,7 +2281,7 @@
           </div>
         </div>
 
-        <!-- 帳號安全設定區：允許使用者變更密碼及刪除帳號 -->
+        
         <div id="accountSecurity" class="hidden max-w-7xl mx-auto px-4 py-6">
           <div class="bg-white rounded-xl shadow-lg p-6">
             <div>
@@ -2250,7 +2291,7 @@
             </h2>
             <p class="text-gray-600 mb-6">在此可以安全地變更您的登入密碼或刪除帳號。此操作將影響您在系統中的登入權限，請謹慎操作。</p>
             <div class="space-y-8">
-              <!-- 變更密碼區塊 -->
+              
               <div class="bg-gray-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">變更密碼</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2268,11 +2309,11 @@
                   </div>
                 </div>
                 <div class="mt-4 flex justify-end">
-                  <!-- 為更新密碼按鈕增加 id，以便 JavaScript 能準確找到此元素並顯示讀取圈 -->
+                  
                   <button id="updatePasswordButton" onclick="changeCurrentUserPassword()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">更新密碼</button>
                 </div>
               </div>
-              <!-- 刪除帳號區塊 -->
+              
               <div class="bg-red-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-red-800 mb-4">刪除帳號</h3>
                 <p class="text-sm text-red-700 mb-4">刪除帳號後，您將無法再登入系統，且所有與此帳號相關的資料將無法恢復。請慎重操作！</p>
@@ -2283,7 +2324,7 @@
                   </div>
                 </div>
                 <div class="mt-4 flex justify-end">
-                  <!-- 為刪除帳號按鈕增加 id，以便 JavaScript 能準確找到此元素並顯示讀取圈 -->
+                  
                   <button id="deleteAccountButton" onclick="deleteCurrentUserAccount()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition duration-200">刪除帳號</button>
                 </div>
               </div>
@@ -2292,79 +2333,79 @@
           </div>
         </div>
 
-        <!-- 模板庫區：在外層加入與其他頁面一致的寬度與內邊距容器，卡片樣式位於內層 -->
-        <!-- 模板庫區：包裝在與其他頁面相同的寬度限制與內外邊距容器中，使版面保持一致 -->
+        
+        
         <div id="templateLibrary" class="hidden max-w-7xl mx-auto px-4 py-6">
           <div class="bg-white rounded-xl shadow-lg p-6">
-            <!-- 移除內層多餘的背景框，避免重複包裹 -->
+            
             <div>
             <h2 class="text-2xl font-bold text-amber-800 mb-6 flex items-center">
               <span class="text-3xl mr-3">📚</span>
               模板庫
             </h2>
             
-            <!-- 標籤切換：診斷模板與醫囑模板位置互換 -->
+            
             <div class="mb-6">
               <div class="flex border-b border-gray-200">
-                <!-- 將診斷模板放在前面，並預設為啟用狀態 -->
+                
                 <button class="px-6 py-3 text-amber-700 border-b-2 border-amber-500 font-medium"
                         onclick="switchTemplateTab('diagnosis')" id="diagnosisTab">
                   🔍 診斷模板
-                  <!-- 動態顯示診斷模板數量 -->
+                  
                   <span id="diagnosisCount" class="ml-2 text-xs font-semibold bg-orange-100 text-orange-700 rounded-full px-2 py-0.5"></span>
                 </button>
                 <button class="px-6 py-3 text-gray-500 hover:text-amber-700 font-medium"
                         onclick="switchTemplateTab('prescriptions')" id="prescriptionsTab">
                   📋 醫囑模板
-                  <!-- 動態顯示醫囑模板數量 -->
+                  
                   <span id="prescriptionCount" class="ml-2 text-xs font-semibold bg-purple-100 text-purple-700 rounded-full px-2 py-0.5"></span>
                 </button>
               </div>
             </div>
 
-            <!-- 診斷模板內容放在前面 -->
+            
             <div id="diagnosisContent" class="template-tab-content">
               <div class="mb-6 space-y-4">
                 <div class="flex gap-4 flex-wrap">
                 </div>
                 <div class="flex gap-4 flex-wrap">
-                  <!-- 搜尋診斷模板名稱 -->
+                  
                   <input type="text" id="diagnosisTemplateSearch" placeholder="搜尋診斷模板名稱或內容..." class="px-4 py-2 border-2 border-orange-200 rounded-lg focus:border-orange-400 focus:outline-none flex-1 min-w-64">
-                  <!-- 診斷科別篩選 -->
+                  
                   <select id="diagnosisTemplateCategoryFilter" class="px-4 py-2 border-2 border-orange-200 rounded-lg focus:border-orange-400 focus:outline-none">
-                    <!-- 為了避免顯示已儲存的分類，此下拉選單僅提供整體科別篩選選項 -->
+                    
                     <option>全部科別</option>
                   </select>
                 </div>
               </div>
               <div class="space-y-4" id="diagnosisTemplatesContainer">
-                <!-- 動態載入診斷模板 -->
+                
               </div>
             </div>
 
-            <!-- 醫囑模板內容放在後面，預設隱藏 -->
+            
             <div id="prescriptionsContent" class="template-tab-content hidden">
               <div class="mb-6 space-y-4">
                 <div class="flex gap-4 flex-wrap">
                 </div>
                 <div class="flex gap-4 flex-wrap">
-                  <!-- 搜尋醫囑模板名稱 -->
+                  
                   <input type="text" id="prescriptionTemplateSearch" placeholder="搜尋醫囑模板名稱..." class="px-4 py-2 border-2 border-purple-200 rounded-lg focus:border-purple-400 focus:outline-none flex-1 min-w-64">
-                  <!-- 醫囑分類篩選 -->
+                  
                   <select id="prescriptionTemplateCategoryFilter" class="px-4 py-2 border-2 border-purple-200 rounded-lg focus:border-purple-400 focus:outline-none">
-                    <!-- 為了避免顯示已儲存的分類，此下拉選單僅提供整體類別篩選選項 -->
+                    
                     <option>全部類別</option>
                   </select>
                 </div>
               </div>
               <div class="space-y-4" id="prescriptionTemplatesContainer">
-                <!-- 動態載入醫囑模板 -->
+                
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 分類管理彈窗 -->
+        
         <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
           <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-6">
@@ -2375,7 +2416,7 @@
             <div class="mb-6">
               <label class="block text-gray-700 font-medium mb-2">新增分類</label>
               <div class="flex gap-2">
-                <!-- 將分類名稱欄位寬度縮短為一半，避免過長 -->
+                
                 <input type="text" id="newCategoryInput" placeholder="輸入分類名稱..." class="w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none">
                 <button onclick="addCategory()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                   新增
@@ -2386,7 +2427,7 @@
             <div>
               <label class="block text-gray-700 font-medium mb-2">現有分類</label>
               <div id="categoryList" class="space-y-2 max-h-64 overflow-y-auto">
-                <!-- 分類列表將在這裡動態生成 -->
+                
               </div>
             </div>
             
@@ -2398,7 +2439,7 @@
           </div>
         </div>
 
-        <!-- 編輯彈窗 -->
+        
         <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
           <div class="bg-white rounded-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
@@ -2407,7 +2448,7 @@
             </div>
             
             <div id="editModalContent">
-              <!-- 編輯內容將在這裡動態生成 -->
+              
             </div>
             
             <div class="mt-6 flex justify-end gap-4">
@@ -2421,14 +2462,8 @@
           </div>
         </div>
 
-        <!--
-            以下為常用藥方和穴位組合選擇彈窗。這兩個彈窗在診症頁面中
-            讓醫師快速載入個人慣用的中藥方或針灸穴位組合。彈窗
-            預設為隱藏(hidden)，當使用者點擊對應的按鈕時會透過
-            JavaScript 函式 showHerbComboModal() 或 showAcupointComboModal()
-            顯示。內部的列表內容會由系統.js 動態渲染。
-        -->
-        <!-- 常用藥方組合彈窗 -->
+        
+        
         <div id="herbComboModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center rounded-t-xl">
@@ -2436,12 +2471,12 @@
                     <button onclick="hideHerbComboModal()" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
                 </div>
                 <div id="herbComboList" class="p-4 space-y-3">
-                    <!-- 動態載入藥方組合 -->
+                    
                 </div>
             </div>
         </div>
 
-        <!-- 常用穴位組合彈窗 -->
+        
         <div id="acupointComboModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center rounded-t-xl">
@@ -2449,12 +2484,12 @@
                     <button onclick="hideAcupointComboModal()" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
                 </div>
                 <div id="acupointComboList" class="p-4 space-y-3">
-                    <!-- 動態載入穴位組合 -->
+                    
                 </div>
             </div>
         </div>
 
-        <!-- 診斷模板選擇彈窗 -->
+        
         <div id="diagnosisTemplateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center rounded-t-xl">
@@ -2462,12 +2497,12 @@
                     <button onclick="hideDiagnosisTemplateModal()" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
                 </div>
                 <div id="diagnosisTemplateList" class="p-4 space-y-3">
-                    <!-- 動態載入診斷模板 -->
+                    
                 </div>
             </div>
         </div>
 
-        <!-- 醫囑模板選擇彈窗 -->
+        
         <div id="prescriptionTemplateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center rounded-t-xl">
@@ -2475,14 +2510,14 @@
                     <button onclick="hidePrescriptionTemplateModal()" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
                 </div>
                 <div id="prescriptionTemplateList" class="p-4 space-y-3">
-                    <!-- 動態載入醫囑模板 -->
+                    
                 </div>
             </div>
         </div>
 
-        <!-- 主系統頁面不再單獨呈現版權聲明，由全局頁腳統一呈現 -->
+        
     </div>
-    <!-- 診所資料修改彈窗 -->
+    
     <div id="clinicSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
@@ -2491,6 +2526,12 @@
             </div>
             
             <div class="p-6">
+                <div class="mb-4 flex items-center gap-3">
+                    <label class="text-sm text-gray-700">選擇診所</label>
+                    <select id="clinicSelectForEditing" class="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"></select>
+                    <button id="addClinicButton" class="ml-auto bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">新增診所</button>
+                    <button id="deleteClinicButton" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm">刪除診所</button>
+                </div>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">診所中文名稱 *</label>
@@ -2530,7 +2571,7 @@
         </div>
     </div>
     
-<!-- 排班管理區（由 cander_NEW.html 移植，新版本） -->
+
 <div id="scheduleManagement" class="hidden bg-white rounded-xl shadow-lg p-6">
     <style>
 #scheduleManagement {
@@ -3310,7 +3351,7 @@
 
         }
     </style>
-    <!-- 額外覆寫排班管理樣式，使字體更小並移除拖放提示 -->
+    
     <style>
         /* 調整排班管理介面字體尺寸及樣式 */
         #scheduleManagement .calendar-header {
@@ -3371,23 +3412,23 @@
         }
     </style>
         <div class="container">
-        <!-- 將標題獨立顯示，不納入漸層背景區塊 -->
+        
         <div class="header">
             <h1><span class="text-3xl mr-3">📅 </span>醫療排班系統</h1>
         </div>
-        <!-- 控制按鈕與篩選面板包裹於漸層背景方框中 -->
+        
         <div class="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 mb-6">
             <div class="controls">
                 <div class="nav-controls">
-                    <!-- 更新按鈕文字為「上一個月」，無箭頭符號 -->
+                    
                     <button class="nav-btn" onclick="scheduleNavigateCalendar(-1)">上一個月</button>
                     <div class="current-date" id="currentDate"></div>
-                    <!-- 更新按鈕文字為「下一個月」，無箭頭符號 -->
+                    
                     <button class="nav-btn" onclick="scheduleNavigateCalendar(1)">下一個月</button>
                     <button class="nav-btn" onclick="scheduleGoToToday()"><span class="text-1xl mr-1">📅 </span> 今天</button>
                 </div>
                 <div class="view-controls">
-                    <!-- 假期選擇下拉式選單 -->
+                    
                     <select id="holidaySelector"
                         class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         onchange="scheduleChangeHolidayRegion(this.value)">
@@ -3397,14 +3438,14 @@
                     </select>
                 </div>
                 <div class="sync-controls">
-                    <!-- 已移除同步 Google 功能 -->
+                    
                     <button class="sync-btn" onclick="scheduleExportToICal()"><span class="text-1xl mr-1">📋</span> 匯出 iCal</button>
-                    <!-- 新增列印更表按鈕：列印當前月份的排班表 -->
+                    
                     <button class="sync-btn" onclick="schedulePrintShiftTable()"><span class="text-1xl mr-1">🖨️</span> 列印更表</button>
                 </div>
             </div>
 
-            <!-- 篩選面板 -->
+            
             <div class="filter-panel">
             <div class="filter-grid">
                 <div class="filter-group">
@@ -3413,7 +3454,7 @@
                         <option value="">所有職位</option>
                         <option value="doctor">醫師</option>
                         <option value="nurse">護理師</option>
-                        <!-- 新增選項：自己。當選擇此選項時，只會顯示當前登入用戶的排班 -->
+                        
                         <option value="self">自己</option>
                     </select>
                 </div>
@@ -3431,7 +3472,7 @@
                     <label class="filter-label">搜尋人員</label>
                     <input type="text" class="filter-input" id="staffSearch" placeholder="輸入姓名..." oninput="scheduleApplyFilters()">
                 </div>
-                <!-- 為快速操作區塊新增 id 以便根據權限顯示/隱藏 -->
+                
                 <div class="quick-actions" id="quickActions">
                     <button class="quick-btn" onclick="scheduleOpenFixedScheduleModal()"><span class="text-1xl mr-1">📅</span> 固定上班</button>
                     <button class="quick-btn danger" onclick="scheduleClearAllShifts()"><span class="text-1xl mr-1">🗑️</span> 清空排班</button>
@@ -3445,7 +3486,7 @@
         </div>
 
         <div class="staff-panel">
-            <!-- 將「醫護人員管理」改為「醫護人員」，並為拖拽提示新增 id 以便根據權限隱藏 -->
+            
             <h3><span class="text-1xl mr-1">👨‍⚕️👩‍⚕️</span> 醫護人員 <span id="dragInstruction" style="font-size: 12px; color: #718096; font-weight: normal;">拖拽人員到行事曆新增排班</span></h3>
             <div class="staff-filter">
                 <button class="staff-filter-btn active" onclick="scheduleFilterStaff('all')">全部</button>
@@ -3457,7 +3498,7 @@
         </div>
     </div>
 
-    <!-- 新增排班模態框 -->
+    
     <div class="modal" id="shiftModal">
         <div class="modal-content">
             <h3>新增排班</h3>
@@ -3500,7 +3541,7 @@
         </div>
     </div>
 
-    <!-- 固定上班模態框 -->
+    
     <div class="modal" id="fixedScheduleModal">
         <div class="modal-content">
             <h3>設定固定上班時間</h3>
@@ -3579,7 +3620,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">備註</label>
-                    <!-- 預設留空，避免每次產生固定排班時自動填入文字 -->
+                    
                     <input type="text" class="form-input" id="fixedScheduleNotes" placeholder="固定上班排程">
                 </div>
                 <div class="form-group">
@@ -3596,10 +3637,10 @@
         </div>
     </div>
 
-    <!-- 通知 -->
+    
     <div class="notification" id="notification"></div>
 
-    <!-- 停用舊的排班管理示範腳本，避免與 schedule_management.js 重複。 -->
+    
     <script type="text/removed">
         // 全域變數
         let currentDate = new Date();
@@ -4575,22 +4616,22 @@
 
         // 列印排班表功能已移除，以下函式不再使用
     </script>
-    <!-- 新排班管理區結束 -->
+    
 </div>
 
-<!-- 自訂工具提示容器 -->
-    <!-- 調整 z-index 並新增行內樣式，以確保 tooltip 在模態框或其他高層元素之上顯示 -->
-    <div id="tooltip" class="hidden pointer-events-none fixed bg-gray-800 text-white text-xs px-3 py-1 rounded-lg shadow-lg z-50 whitespace-pre-line" style="z-index: 9999;"></div>
-    <!-- 載入 Chart.js 用於繪製個人統計分析圖表 -->
+
+    
+    <div id="tooltip" class="hidden pointer-events-none fixed bg-gray-800 text-white text-xs px-3 py-1 rounded-lg shadow-lg z-50 whitespace-pre-line" style="z-index: 2147483647;"></div>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script src="schedule_management.js"></script><script src="system.js"></script>
     <script src="personalStatistics.js"></script>
-    <!-- 系統管理相關腳本拆分至獨立檔案 -->
+    
     <script src="systemmanagement.js"></script>
-    <!-- 新增聊天模組腳本，需在 system.js 之後載入 -->
+    
     <script src="chat_module.js"></script>
-    <!-- 語言國際化腳本，必須在系統腳本之後載入 -->
+    
     <script src="i18n.js"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"96f142c32d05b42b","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.8.0","token":"b2074e7888b746fe9fbbc15492b4c3d4"}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"97172fa8b875b31b","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.8.0","token":"b2074e7888b746fe9fbbc15492b4c3d4"}' crossorigin="anonymous"></script>
