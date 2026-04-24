@@ -277,7 +277,8 @@
             
             <div class="absolute top-2 right-2">
                 <select id="languageSelector" class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="zh">中文</option>
+                    <option value="zh">繁體中文</option>
+                    <option value="zh-cn">简体中文</option>
                     <option value="en">English</option>
                 </select>
             </div>
@@ -688,8 +689,8 @@
                     </div>
                 </div>
                 
-                <div id="registrationModal" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-center justify-center p-4">
-                    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+                <div id="registrationModal" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
                         <div class="bg-green-600 text-white px-6 py-4 rounded-t-xl">
                             <div class="flex justify-between items-center">
                                 <h3 class="text-xl font-bold">病人掛號</h3>
@@ -697,54 +698,58 @@
                             </div>
                         </div>
                         
-                        <div class="p-6 space-y-4">
-                            
-                            <div class="bg-blue-50 rounded-lg p-4">
-                                <div class="flex items-center mb-2">
-                                    <span class="mr-2">👤</span>
-                                    <span class="font-semibold text-gray-700">病人資訊</span>
-                                </div>
-                                <div id="selectedPatientInfo" class="text-sm text-gray-600">
+                        <div class="p-6 overflow-y-auto flex-1">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 rounded-lg p-4">
+                                        <div class="flex items-center mb-2">
+                                            <span class="mr-2">👤</span>
+                                            <span class="font-semibold text-gray-700">病人資訊</span>
+                                        </div>
+                                        <div id="selectedPatientInfo" class="text-sm text-gray-600">
+                                            
+                                        </div>
+                                    </div>
                                     
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <span class="mr-2">👨‍⚕️</span><span>掛號醫師 *</span>
-                                </label>
-                                <select id="appointmentDoctor" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                    <option value="">請選擇醫師</option>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <span class="mr-2">👨‍⚕️</span><span>掛號醫師 *</span>
+                                        </label>
+                                        <select id="appointmentDoctor" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                            <option value="">請選擇醫師</option>
+                                            
+                                        </select>
+                                    </div>
                                     
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <span class="mr-2">⏰</span><span>掛號時間</span>
-                                </label>
-                                <input type="datetime-local" id="appointmentDateTime" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <span class="mr-2">⏰</span><span>掛號時間</span>
+                                        </label>
+                                        <input type="datetime-local" id="appointmentDateTime" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <span class="mr-2">🧾</span><span>選擇問診資料</span>
+                                        </label>
+                                        <select id="inquirySelect" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                            <option value="">不使用問診資料</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500 mt-1">若病人已填寫問診，可在此選擇預填資訊</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <span class="mr-2">📝</span><span>主訴症狀</span>
+                                        </label>
+                                        <textarea id="quickChiefComplaint" placeholder="請簡述病人的主要症狀..." rows="8" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"></textarea>
+                                    </div>
+                                </div>
                             </div>
 
-                            
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <span class="mr-2">🧾</span><span>選擇問診資料</span>
-                                </label>
-                                <select id="inquirySelect" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                    <option value="">不使用問診資料</option>
-                                </select>
-                                <p class="text-xs text-gray-500 mt-1">若病人已填寫問診，可在此選擇預填資訊</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <span class="mr-2">📝</span><span>主訴症狀</span>
-                                </label>
-                                <textarea id="quickChiefComplaint" placeholder="請簡述病人的主要症狀..." rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"></textarea>
-                            </div>
-                            
-                            <div class="flex space-x-3 pt-4">
+                            <div class="flex space-x-3 pt-6 sticky bottom-0 bg-white">
                                 <button onclick="closeRegistrationModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition duration-200">
                                     取消
                                 </button>
@@ -1377,6 +1382,12 @@
                                         <input type="number" id="inventoryThreshold" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" step="0.5">
                                     </div>
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">預設用量（克）</label>
+                                    <div class="flex items-center">
+                                        <input type="number" id="inventoryDefaultDosage" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" step="0.1" placeholder="處方預設克數">
+                                    </div>
+                                </div>
                                 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
@@ -1721,6 +1732,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">姓名</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">職位</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">主要診所</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">註冊編號</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">電子郵件</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">狀態</th>
@@ -1797,8 +1809,11 @@
                             <button onclick="generateFinancialReport()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition duration-200 flex items-center">
                                 <span class="mr-2">🔄</span><span>更新報表</span>
                             </button>
-                            <button onclick="exportFinancialReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200 flex items-center">
-                                <span class="mr-2">📥</span><span>匯出</span>
+                            <button onclick="exportFinancialReportTxt()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200 flex items-center">
+                                <span class="mr-2">📄</span><span>匯出TXT</span>
+                            </button>
+                            <button onclick="exportFinancialReportExcel()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition duration-200 flex items-center">
+                                <span class="mr-2">📊</span><span>匯出Excel</span>
                             </button>
                         </div>
                     </div>
@@ -2016,7 +2031,7 @@
         <div id="backupProgressText" class="mt-2 text-sm text-gray-700"></div>
     </div>
 </div>
-                                
+
                     <div class="bg-gray-50 rounded-lg p-6">
                         <h3 class="text-lg font-semibold mb-4">診所設定</h3>
                         <div class="space-y-3">
@@ -2034,6 +2049,77 @@
                                     診所資料修改
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-6 md:col-span-2">
+                        <h3 class="text-lg font-semibold mb-4">收據自定義設定</h3>
+                        <p class="text-sm text-gray-600 mb-4">以下設定會套用到目前選擇的診所，可分別控制「列印收據」與「藥單醫囑」欄位顯示。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-800 mb-3">列印收據</h4>
+                                <div class="space-y-2 text-sm">
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="receiptField_receiptNo" class="rounded border-gray-300">收據編號</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="receiptField_medicalRecordNo" class="rounded border-gray-300">病歷編號</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="receiptField_patientNumber" class="rounded border-gray-300">病人號碼</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="receiptField_consultationDate" class="rounded border-gray-300">診療日期</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="receiptField_consultationTime" class="rounded border-gray-300">診療時間</label>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-800 mb-3">藥單醫囑</h4>
+                                <div class="space-y-2 text-sm">
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="prescriptionField_medicalRecordNo" class="rounded border-gray-300">病歷編號</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="prescriptionField_patientNumber" class="rounded border-gray-300">病人號碼</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="prescriptionField_consultationDate" class="rounded border-gray-300">診療日期</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" id="prescriptionField_consultationTime" class="rounded border-gray-300">診療時間</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-4">
+                            <button onclick="saveReceiptCustomizationSettings()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200">儲存收據自定義設定</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-6 md:col-span-2">
+                        <h3 class="text-lg font-semibold mb-4">舊資料轉移系統</h3>
+                        <p class="text-sm text-gray-600 mb-4">可匯入舊診所系統的 JSON 或 CSV。支援病人與病歷資料，系統會先解析預覽，再執行遷移並回報成功/略過/失敗筆數。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">匯入檔案格式</label>
+                                <select id="legacyMigrationFormat" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                    <option value="auto" selected>自動判斷</option>
+                                    <option value="json">JSON</option>
+                                    <option value="csv">CSV</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">資料類型</label>
+                                <select id="legacyMigrationDataType" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                    <option value="auto" selected>自動判斷</option>
+                                    <option value="patients">病人資料</option>
+                                    <option value="consultations">病歷資料</option>
+                                    <option value="mixed">病人+病歷</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button id="legacyMigrationStartBtn" onclick="startLegacyDataMigration()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition duration-200">
+                                    開始資料轉移
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-4 mb-4">
+                            <button id="legacyMigrationChooseBtn" onclick="triggerLegacyMigrationImport()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200">
+                                選擇舊資料檔案
+                            </button>
+                            <div id="legacyMigrationFileInfo" class="text-sm text-gray-600 flex items-center">尚未選擇檔案</div>
+                        </div>
+                        <input type="file" id="legacyMigrationFileInput" accept=".json,.csv,text/csv,application/json" class="hidden" onchange="handleLegacyMigrationFile(this.files[0])">
+                        <div id="legacyMigrationSummary" class="hidden rounded-lg bg-white border border-gray-200 p-4 text-sm text-gray-700 mb-4"></div>
+                        <div id="legacyMigrationProgressContainer" class="hidden">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="legacyMigrationProgressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width:0%"></div>
+                            </div>
+                            <div id="legacyMigrationProgressText" class="mt-2 text-sm text-gray-700">遷移進度 0%</div>
                         </div>
                     </div>
 
@@ -2556,6 +2642,10 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">診所地址</label>
                         <textarea id="clinicAddress" placeholder="請輸入診所完整地址" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">收據感謝語（列印收據底部）</label>
+                        <textarea id="clinicReceiptThankYouText" placeholder="預設：謝謝您的光臨，祝您身體健康！" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
                     </div>
                 </div>
                 

@@ -422,10 +422,11 @@ function getHerbInventoryFromView(itemId) {
             quantity: inv.quantity ?? 0,
             threshold: inv.threshold ?? 0,
             unit: inv.unit || 'g',
-            disabled: !!inv.disabled
+            disabled: !!inv.disabled,
+            defaultDosage: (typeof inv.defaultDosage === 'number' && !Number.isNaN(inv.defaultDosage)) ? inv.defaultDosage : null
         };
     }
-    return { quantity: 0, threshold: 0, unit: 'g', disabled: false };
+    return { quantity: 0, threshold: 0, unit: 'g', disabled: false, defaultDosage: null };
 }
 
 
@@ -1085,7 +1086,10 @@ const consultationHistoryPager = {
         state.recordsByIndex.forEach((record, idx) => {
             const key = this.getRecordDateKey(record);
             if (!key) return;
-            map[key] = idx;
+            if (!Array.isArray(map[key])) {
+                map[key] = [];
+            }
+            map[key].push(idx);
         });
         state.dateIndexMap = map;
         state.dateIndexReady = true;
@@ -1233,9 +1237,10 @@ const consultationHistoryPager = {
                     return;
                 }
                 const ascIndex = Math.max(0, state.totalCount - 1 - descIndex);
-                if (typeof map[key] !== 'number') {
-                    map[key] = ascIndex;
+                if (!Array.isArray(map[key])) {
+                    map[key] = [];
                 }
+                map[key].push(ascIndex);
                 descIndex++;
             });
             state.dateIndexMap = map;
@@ -1251,7 +1256,15 @@ const consultationHistoryPager = {
     getDateIndex(patientId, dateKey) {
         const state = this.getCachedPatientState(patientId);
         if (!state || !state.dateIndexMap) return null;
-        return typeof state.dateIndexMap[dateKey] === 'number' ? state.dateIndexMap[dateKey] : null;
+        const indices = state.dateIndexMap[dateKey];
+        if (!Array.isArray(indices) || indices.length === 0) return null;
+        return indices[indices.length - 1];
+    },
+    getDateIndices(patientId, dateKey) {
+        const state = this.getCachedPatientState(patientId);
+        if (!state || !state.dateIndexMap) return [];
+        const indices = state.dateIndexMap[dateKey];
+        return Array.isArray(indices) ? indices.slice() : [];
     },
     getDateIndexMap(patientId) {
         const state = this.getCachedPatientState(patientId);
@@ -1909,6 +1922,8 @@ async function fetchUsers(forceRefresh = false) {
                         document.getElementById('clinicBusinessHours').value = clinicSettings.businessHours || '';
                         document.getElementById('clinicPhone').value = clinicSettings.phone || '';
                         document.getElementById('clinicAddress').value = clinicSettings.address || '';
+                        const thankYouInput = document.getElementById('clinicReceiptThankYouText');
+                        if (thankYouInput) thankYouInput.value = clinicSettings.receiptThankYouText || '';
                         updateClinicSettingsDisplay();
                         updateCurrentClinicDisplay();
                     });
@@ -2870,15 +2885,29 @@ function getHerbInventory(itemId) {
             threshold: inv.threshold ?? 0,
             unit: inv.unit || 'g',
             
-            disabled: !!inv.disabled
+            disabled: !!inv.disabled,
+            defaultDosage: (typeof inv.defaultDosage === 'number' && !Number.isNaN(inv.defaultDosage)) ? inv.defaultDosage : null
         };
     }
     
-    return { quantity: 0, threshold: 0, unit: 'g', disabled: false };
+    return { quantity: 0, threshold: 0, unit: 'g', disabled: false, defaultDosage: null };
+}
+
+function parseDefaultDosageNumber(raw) {
+    const val = parseFloat(String(raw ?? '').trim());
+    if (!Number.isFinite(val) || val < 0) return null;
+    return Math.round(val * 100) / 100;
+}
+
+function resolvePrescriptionDefaultDosage(item, inv) {
+    if (inv && typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage) && inv.defaultDosage >= 0) {
+        return Math.round(inv.defaultDosage * 100) / 100;
+    }
+    return item && item.type === 'formula' ? 5 : 1;
 }
 
 
-async function setHerbInventory(itemId, quantity, threshold, unit, disabled) {
+async function setHerbInventory(itemId, quantity, threshold, unit, disabled, defaultDosage) {
     await waitForFirebaseDb();
     const data = {};
     if (quantity !== undefined && quantity !== null) {
@@ -2892,6 +2921,9 @@ async function setHerbInventory(itemId, quantity, threshold, unit, disabled) {
     }
     if (disabled !== undefined && disabled !== null) {
         data.disabled = !!disabled;
+    }
+    if (defaultDosage !== undefined && defaultDosage !== null && !Number.isNaN(Number(defaultDosage))) {
+        data.defaultDosage = Number(defaultDosage);
     }
     const clinicId = (function() {
         try {
@@ -2925,7 +2957,8 @@ async function getHerbInventoryForMode(itemId, mode) {
                 quantity: inv.quantity ?? 0,
                 threshold: inv.threshold ?? 0,
                 unit: inv.unit || 'g',
-                disabled: !!inv.disabled
+                disabled: !!inv.disabled,
+                defaultDosage: (typeof inv.defaultDosage === 'number' && !Number.isNaN(inv.defaultDosage)) ? inv.defaultDosage : null
             };
         }
     } catch (_e) {}
@@ -2938,11 +2971,12 @@ async function getHerbInventoryForMode(itemId, mode) {
                 quantity: inv.quantity ?? 0,
                 threshold: inv.threshold ?? 0,
                 unit: inv.unit || 'g',
-                disabled: !!inv.disabled
+                disabled: !!inv.disabled,
+                defaultDosage: (typeof inv.defaultDosage === 'number' && !Number.isNaN(inv.defaultDosage)) ? inv.defaultDosage : null
             };
         }
     } catch (_e2) {}
-    return { quantity: 0, threshold: 0, unit: 'g', disabled: false };
+    return { quantity: 0, threshold: 0, unit: 'g', disabled: false, defaultDosage: null };
 }
 
 
@@ -2965,21 +2999,25 @@ async function getClinicScopedHerbInventoryForMode(itemId, mode) {
                 quantity: inv.quantity ?? 0,
                 threshold: inv.threshold ?? 0,
                 unit: inv.unit || 'g',
-                disabled: !!inv.disabled
+                disabled: !!inv.disabled,
+                defaultDosage: (typeof inv.defaultDosage === 'number' && !Number.isNaN(inv.defaultDosage)) ? inv.defaultDosage : null
             };
         }
     } catch (_e) {}
-    return { quantity: 0, threshold: 0, unit: 'g', disabled: false };
+    return { quantity: 0, threshold: 0, unit: 'g', disabled: false, defaultDosage: null };
 }
 
 
-async function setHerbInventoryForMode(itemId, quantity, threshold, unit, disabled, mode) {
+async function setHerbInventoryForMode(itemId, quantity, threshold, unit, disabled, mode, defaultDosage) {
     await waitForFirebaseDb();
     const data = {};
     if (quantity !== undefined && quantity !== null) data.quantity = Number(quantity);
     if (threshold !== undefined && threshold !== null) data.threshold = Number(threshold);
     if (unit !== undefined && unit !== null) data.unit = unit;
     if (disabled !== undefined && disabled !== null) data.disabled = !!disabled;
+    if (defaultDosage !== undefined && defaultDosage !== null && !Number.isNaN(Number(defaultDosage))) {
+        data.defaultDosage = Number(defaultDosage);
+    }
     const clinicId = (function() {
         try {
             return localStorage.getItem('currentClinicId') || (typeof currentClinicId !== 'undefined' ? currentClinicId : 'local-default');
@@ -3021,19 +3059,23 @@ async function revertInventoryForConsultation(consultationId) {
                 const newQty = (inv.quantity || 0) + consumption;
                 const unitToUse = inv.unit || 'g';
                 const thresholdToUse = typeof inv.threshold === 'number' ? inv.threshold : 0;
-                await setHerbInventoryForMode(itemId, newQty, thresholdToUse, unitToUse, inv.disabled, mode);
+                await setHerbInventoryForMode(itemId, newQty, thresholdToUse, unitToUse, inv.disabled, mode, inv.defaultDosage);
                 try {
                     if (mode === 'slice') {
                         herbInventorySlice[String(itemId)] = {
                             quantity: newQty,
                             threshold: thresholdToUse,
-                            unit: unitToUse
+                            unit: unitToUse,
+                            disabled: !!inv.disabled,
+                            defaultDosage: (typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage)) ? inv.defaultDosage : null
                         };
                     } else {
                         herbInventoryGranule[String(itemId)] = {
                             quantity: newQty,
                             threshold: thresholdToUse,
-                            unit: unitToUse
+                            unit: unitToUse,
+                            disabled: !!inv.disabled,
+                            defaultDosage: (typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage)) ? inv.defaultDosage : null
                         };
                     }
                 } catch (_e) {}
@@ -3067,14 +3109,16 @@ async function updateInventoryAfterConsultation(consultationId, items, days, fre
             const inv = getHerbInventory(key);
             const newQty = (inv.quantity || 0) + consumption;
             
-            await setHerbInventory(key, newQty, inv.threshold, inv.unit);
+            await setHerbInventory(key, newQty, inv.threshold, inv.unit, inv.disabled, inv.defaultDosage);
             
             try {
                 if (typeof herbInventory !== 'undefined') {
                     herbInventory[String(key)] = {
                         quantity: newQty,
                         threshold: inv.threshold,
-                        unit: inv.unit
+                        unit: inv.unit,
+                        disabled: !!inv.disabled,
+                        defaultDosage: (typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage)) ? inv.defaultDosage : null
                     };
                 }
             } catch (_e) {
@@ -3092,14 +3136,16 @@ async function updateInventoryAfterConsultation(consultationId, items, days, fre
         const consumption = dosage * days * freq;
         const inv = getHerbInventory(item.id);
         const newQty = (inv.quantity || 0) - consumption;
-        await setHerbInventory(item.id, newQty, inv.threshold, inv.unit);
+        await setHerbInventory(item.id, newQty, inv.threshold, inv.unit, inv.disabled, inv.defaultDosage);
         
         try {
             if (typeof herbInventory !== 'undefined') {
                 herbInventory[String(item.id)] = {
                     quantity: newQty,
                     threshold: inv.threshold,
-                    unit: inv.unit
+                    unit: inv.unit,
+                    disabled: !!inv.disabled,
+                    defaultDosage: (typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage)) ? inv.defaultDosage : null
                 };
             }
         } catch (_e) {
@@ -3192,19 +3238,23 @@ async function updateInventoryAfterConsultationMulti(consultationId, prescriptio
         const unit = inv.unit || 'g';
         const currQty = inv.quantity || 0;
         const newQty = currQty - delta;
-        await setHerbInventoryForMode(itemId, newQty, inv.threshold, unit, inv.disabled, mode);
+        await setHerbInventoryForMode(itemId, newQty, inv.threshold, unit, inv.disabled, mode, inv.defaultDosage);
         try {
             if (mode === 'slice') {
                 herbInventorySlice[String(itemId)] = {
                     quantity: newQty,
                     threshold: inv.threshold,
-                    unit
+                    unit,
+                    disabled: !!inv.disabled,
+                    defaultDosage: (typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage)) ? inv.defaultDosage : null
                 };
             } else {
                 herbInventoryGranule[String(itemId)] = {
                     quantity: newQty,
                     threshold: inv.threshold,
-                    unit
+                    unit,
+                    disabled: !!inv.disabled,
+                    defaultDosage: (typeof inv.defaultDosage === 'number' && Number.isFinite(inv.defaultDosage)) ? inv.defaultDosage : null
                 };
             }
         } catch (_e) {}
@@ -3269,6 +3319,7 @@ async function openInventoryModal(itemId) {
         const modal = document.getElementById('inventoryModal');
         const qtyInput = document.getElementById('inventoryQuantity');
         const thrInput = document.getElementById('inventoryThreshold');
+        const defaultDosageInput = document.getElementById('inventoryDefaultDosage');
         
         try {
             
@@ -3334,9 +3385,36 @@ async function openInventoryModal(itemId) {
                 };
                 thrInput.addEventListener('keypress', thrInput._enterSaveHandler);
             }
+
+            if (defaultDosageInput) {
+                if (defaultDosageInput._enterSaveHandler) {
+                    defaultDosageInput.removeEventListener('keypress', defaultDosageInput._enterSaveHandler);
+                }
+                defaultDosageInput._enterSaveHandler = function (ev) {
+                    if (ev && ev.key === 'Enter') {
+                        ev.preventDefault();
+                        try {
+                            const saveBtn = modal ? modal.querySelector('button[onclick*="saveInventoryChanges"]') : null;
+                            if (saveBtn && typeof saveBtn.click === 'function') {
+                                saveBtn.click();
+                                return;
+                            }
+                        } catch (_e) {
+                        }
+                        try {
+                            if (typeof saveInventoryChanges === 'function') {
+                                saveInventoryChanges();
+                            }
+                        } catch (_e) {
+                            console.error('Enter 鍵觸發庫存儲存失敗:', _e);
+                        }
+                    }
+                };
+                defaultDosageInput.addEventListener('keypress', defaultDosageInput._enterSaveHandler);
+            }
         } catch (_e) {
             
-            console.error('綁定庫存數量或警戒量輸入 Enter 鍵事件失敗:', _e);
+            console.error('綁定庫存輸入 Enter 鍵事件失敗:', _e);
         }
         const titleEl = document.getElementById('inventoryModalTitle');
         
@@ -3364,6 +3442,11 @@ async function openInventoryModal(itemId) {
             }
             if (thrInput) {
                 thrInput.value = ((inv.threshold ?? 0) / factor).toString();
+            }
+            if (defaultDosageInput) {
+                const item = Array.isArray(herbLibrary) ? herbLibrary.find(h => h && String(h.id) === String(itemId)) : null;
+                const defaultDose = resolvePrescriptionDefaultDosage(item || { type: 'herb', dosage: null }, inv);
+                defaultDosageInput.value = Number.isFinite(defaultDose) ? String(defaultDose) : '';
             }
             
             try {
@@ -3456,6 +3539,7 @@ async function saveInventoryChanges() {
     try {
         const qtyInput = document.getElementById('inventoryQuantity');
         const thrInput = document.getElementById('inventoryThreshold');
+        const defaultDosageInput = document.getElementById('inventoryDefaultDosage');
         const qVal = qtyInput ? parseFloat(qtyInput.value) : NaN;
         const tVal = thrInput ? parseFloat(thrInput.value) : NaN;
         
@@ -3479,13 +3563,17 @@ async function saveInventoryChanges() {
             disabledVal = false;
         }
         
-        await setHerbInventoryForMode(id, quantityBase, thresholdBase, qtyUnit, disabledVal, currentHerbLibraryViewMode);
+        const itemForDefault = Array.isArray(herbLibrary) ? herbLibrary.find(h => h && String(h.id) === String(id)) : null;
+        const fallbackDefaultDose = resolvePrescriptionDefaultDosage(itemForDefault || { type: 'herb', dosage: null }, null);
+        const parsedDefaultDose = parseDefaultDosageNumber(defaultDosageInput ? defaultDosageInput.value : null);
+        const defaultDoseToSave = parsedDefaultDose !== null ? parsedDefaultDose : fallbackDefaultDose;
+        await setHerbInventoryForMode(id, quantityBase, thresholdBase, qtyUnit, disabledVal, currentHerbLibraryViewMode, defaultDoseToSave);
         try {
             if (currentHerbLibraryViewMode === 'slice') {
-                herbInventorySlice[String(id)] = { quantity: quantityBase, threshold: thresholdBase, unit: qtyUnit, disabled: !!disabledVal };
+                herbInventorySlice[String(id)] = { quantity: quantityBase, threshold: thresholdBase, unit: qtyUnit, disabled: !!disabledVal, defaultDosage: defaultDoseToSave };
                 herbInventorySliceInitialized = true;
             } else {
-                herbInventoryGranule[String(id)] = { quantity: quantityBase, threshold: thresholdBase, unit: qtyUnit, disabled: !!disabledVal };
+                herbInventoryGranule[String(id)] = { quantity: quantityBase, threshold: thresholdBase, unit: qtyUnit, disabled: !!disabledVal, defaultDosage: defaultDoseToSave };
                 herbInventoryGranuleInitialized = true;
             }
         } catch (_e) {}
@@ -5389,6 +5477,10 @@ async function logout() {
                 loadBillingManagement();
             } else if (sectionId === 'financialReports') {
                 loadFinancialReports();
+            } else if (sectionId === 'systemManagement') {
+                try {
+                    updateClinicSettingsDisplay();
+                } catch (_eUpdateClinicSettingsDisplay) {}
             } else if (sectionId === 'userManagement') {
                 loadUserManagement();
             } else if (sectionId === 'personalStatistics') {
@@ -8294,9 +8386,13 @@ function getOperationButtons(appointment, patient = null) {
         currentUserData.position === '醫師' && 
         appointment.appointmentDoctor === currentUserData.username;
     
+    // 檢查當前用戶是否為管理員
+    const isAdminUser = currentUserData && currentUserData.position === '診所管理';
     // 檢查當前用戶是否為管理員或護理師（可以進行管理操作）
-    const canManage = currentUserData && 
-        (currentUserData.position === '診所管理' || currentUserData.position === '護理師');
+    const canManage = currentUserData &&
+        (isAdminUser || currentUserData.position === '護理師');
+    // 管理員或該掛號醫師可修改病歷
+    const canEditMedicalRecord = isAppointmentDoctor || isAdminUser;
     
     // 檢查當前用戶是否可以確認到達（管理員、護理師或該掛號的醫師）
     const canConfirmArrival = canManage || isAppointmentDoctor;
@@ -8369,14 +8465,14 @@ function getOperationButtons(appointment, patient = null) {
             buttons.push(`<button onclick="printSickLeaveFromAppointment(${appointment.id})" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap transition duration-200">病假證明</button>`);
             
             if (isDisabled) {
-                if (isAppointmentDoctor) {
+                if (canEditMedicalRecord) {
                     buttons.push(`<span class="bg-gray-300 text-gray-500 px-2 py-1 rounded text-xs whitespace-nowrap cursor-not-allowed" ${disabledTooltip}>修改病歷</span>`);
                 }
                 if (canManage) {
                     buttons.push(`<span class="bg-gray-300 text-gray-500 px-2 py-1 rounded text-xs whitespace-nowrap cursor-not-allowed" ${disabledTooltip}>撤回診症</span>`);
                 }
             } else {
-                if (isAppointmentDoctor) {
+                if (canEditMedicalRecord) {
                     buttons.push(`<button onclick="editMedicalRecord(${appointment.id})" class="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap transition duration-200">修改病歷</button>`);
                 }
                 if (canManage) {
@@ -9868,8 +9964,8 @@ async function saveConsultation() {
         let currentPatientConsultations = [];
         let currentPatientHistoryPage = 0;
         const historyCalendarState = {
-            patient: { open: false, year: null, month: null },
-            consultation: { open: false, year: null, month: null }
+            patient: { open: false, year: null, month: null, selectedDateKey: null },
+            consultation: { open: false, year: null, month: null, selectedDateKey: null }
         };
         function getHistoryCalendarContextPatientId(contextKey) {
             return contextKey === 'patient' ? currentPatientHistoryPatientId : currentConsultationHistoryPatientId;
@@ -9891,6 +9987,7 @@ async function saveConsultation() {
             const st = historyCalendarState[contextKey];
             if (!st) return;
             st.open = false;
+            st.selectedDateKey = null;
         }
         function openHistoryCalendarAtCurrentMonth(contextKey) {
             const st = historyCalendarState[contextKey];
@@ -9902,6 +9999,29 @@ async function saveConsultation() {
             st.year = baseDate.getFullYear();
             st.month = baseDate.getMonth();
             st.open = true;
+            st.selectedDateKey = null;
+        }
+        function buildHistoryDateSelectionHtml(contextKey, dateMap) {
+            const st = historyCalendarState[contextKey];
+            if (!st || !st.selectedDateKey) return '';
+            const indices = Array.isArray(dateMap[st.selectedDateKey]) ? dateMap[st.selectedDateKey].slice() : [];
+            if (indices.length <= 1) return '';
+            const patientId = getHistoryCalendarContextPatientId(contextKey);
+            const state = consultationHistoryPager.getCachedPatientState(patientId);
+            const records = (state && Array.isArray(state.recordsByIndex)) ? state.recordsByIndex : [];
+            const buttons = indices.map((idx, arrIdx) => {
+                const rec = records[idx];
+                const ts = rec ? formatConsultationDateTime(rec.date || rec.createdAt || rec.updatedAt) : `同日病歷 ${arrIdx + 1}`;
+                const no = rec && (rec.medicalRecordNumber || rec.id) ? (rec.medicalRecordNumber || rec.id) : '';
+                const label = no ? `${ts}（${no}）` : ts;
+                return `<button onclick="selectHistoryCalendarRecord('${contextKey}', ${idx}, event)" class="w-full text-left px-3 py-2 text-sm rounded bg-white border border-blue-200 hover:bg-blue-50 transition">${window.escapeHtml(label)}</button>`;
+            }).join('');
+            return `
+                <div class="mt-3 bg-white border border-blue-200 rounded p-2">
+                    <div class="text-xs text-gray-600 mb-2">已選日期 ${st.selectedDateKey}，請選擇病歷：</div>
+                    <div class="space-y-2">${buttons}</div>
+                </div>
+            `;
         }
         function buildHistoryCalendarHtml(contextKey) {
             const st = historyCalendarState[contextKey];
@@ -9924,12 +10044,15 @@ async function saveConsultation() {
             }
             for (let day = 1; day <= daysInMonth; day++) {
                 const key = `${year}-${pad(month + 1)}-${pad(day)}`;
-                const hasRecord = typeof dateMap[key] === 'number';
+                const dateIndices = Array.isArray(dateMap[key]) ? dateMap[key] : [];
+                const hasRecord = dateIndices.length > 0;
+                const count = dateIndices.length;
                 if (hasRecord) {
                     cells += `
                         <button onclick="selectHistoryCalendarDate('${contextKey}', '${key}', event)"
-                                class="h-10 rounded-lg text-sm font-medium bg-blue-500 text-white hover:bg-blue-600 transition duration-150">
+                                class="h-10 rounded-lg text-sm font-medium bg-blue-500 text-white hover:bg-blue-600 transition duration-150 relative">
                             ${day}
+                            ${count > 1 ? `<span class="absolute -top-1 -right-1 text-[10px] leading-none px-1 py-0.5 rounded-full bg-white text-blue-600 border border-blue-200">${count}</span>` : ''}
                         </button>
                     `;
                 } else {
@@ -9940,6 +10063,7 @@ async function saveConsultation() {
                     `;
                 }
             }
+            const selectionHtml = buildHistoryDateSelectionHtml(contextKey, dateMap);
             return `
                 <div class="mb-6 border border-blue-100 bg-blue-50 rounded-lg p-3">
                     <div class="flex items-center justify-between mb-3">
@@ -9954,6 +10078,7 @@ async function saveConsultation() {
                         ${cells}
                     </div>
                     <div class="text-xs text-gray-500 mt-2">藍色日期代表有病歷，點擊可跳轉</div>
+                    ${selectionHtml}
                 </div>
             `;
         }
@@ -9965,6 +10090,7 @@ async function saveConsultation() {
             try {
                 if (st.open) {
                     st.open = false;
+                    st.selectedDateKey = null;
                     renderHistoryCalendar(contextKey);
                     return;
                 }
@@ -9987,6 +10113,18 @@ async function saveConsultation() {
             const d = new Date(st.year, st.month + delta, 1);
             st.year = d.getFullYear();
             st.month = d.getMonth();
+            st.selectedDateKey = null;
+            renderHistoryCalendar(contextKey);
+        }
+        function jumpToHistoryCalendarIndex(contextKey, patientId, targetIndex) {
+            const latestState = consultationHistoryPager.getCachedPatientState(patientId);
+            const ctx = consultationHistoryPager.contexts[contextKey];
+            if (!ctx) return;
+            if (latestState && Array.isArray(latestState.recordsByIndex)) {
+                ctx.setConsultations(latestState.recordsByIndex);
+            }
+            ctx.setCurrentPage(targetIndex);
+            closeHistoryCalendar(contextKey);
             renderHistoryCalendar(contextKey);
         }
         async function selectHistoryCalendarDate(contextKey, dateKey, evt) {
@@ -9995,24 +10133,41 @@ async function saveConsultation() {
             try {
                 const patientId = getHistoryCalendarContextPatientId(contextKey);
                 if (!patientId) return;
-                let targetIndex = consultationHistoryPager.getDateIndex(patientId, dateKey);
-                if (typeof targetIndex !== 'number') {
+                let dateIndices = consultationHistoryPager.getDateIndices(patientId, dateKey);
+                if (!Array.isArray(dateIndices) || dateIndices.length === 0) {
                     const indexed = await consultationHistoryPager.ensureDateIndex(patientId);
                     if (!indexed) return;
-                    targetIndex = consultationHistoryPager.getDateIndex(patientId, dateKey);
+                    dateIndices = consultationHistoryPager.getDateIndices(patientId, dateKey);
                 }
-                if (typeof targetIndex !== 'number') return;
+                if (!Array.isArray(dateIndices) || dateIndices.length === 0) return;
+                if (dateIndices.length > 1) {
+                    for (const idx of dateIndices) {
+                        await consultationHistoryPager.ensureLoadedAtIndex(patientId, idx);
+                    }
+                    const st = historyCalendarState[contextKey];
+                    if (st) {
+                        st.selectedDateKey = dateKey;
+                    }
+                    renderHistoryCalendar(contextKey);
+                    return;
+                }
+                const targetIndex = dateIndices[0];
                 const loaded = await consultationHistoryPager.ensureLoadedAtIndex(patientId, targetIndex);
                 if (!loaded) return;
-                const latestState = consultationHistoryPager.getCachedPatientState(patientId);
-                const ctx = consultationHistoryPager.contexts[contextKey];
-                if (!ctx) return;
-                if (latestState && Array.isArray(latestState.recordsByIndex)) {
-                    ctx.setConsultations(latestState.recordsByIndex);
-                }
-                ctx.setCurrentPage(targetIndex);
-                closeHistoryCalendar(contextKey);
-                renderHistoryCalendar(contextKey);
+                jumpToHistoryCalendarIndex(contextKey, patientId, targetIndex);
+            } finally {
+                if (btn) clearButtonLoading(btn);
+            }
+        }
+        async function selectHistoryCalendarRecord(contextKey, targetIndex, evt) {
+            const btn = evt && evt.currentTarget ? evt.currentTarget : null;
+            if (btn) setButtonLoading(btn, '讀取中...');
+            try {
+                const patientId = getHistoryCalendarContextPatientId(contextKey);
+                if (!patientId) return;
+                const loaded = await consultationHistoryPager.ensureLoadedAtIndex(patientId, targetIndex);
+                if (!loaded) return;
+                jumpToHistoryCalendarIndex(contextKey, patientId, targetIndex);
             } finally {
                 if (btn) clearButtonLoading(btn);
             }
@@ -10124,10 +10279,10 @@ if (!patient) {
             // Prepare dynamic translation segments.  We look up static labels
             // from the dictionary and build English phrases when needed.
             const recordTitle = dict['診症記錄'] || '診症記錄';
-            const visitText = lang === 'zh'
+            const visitText = lang !== 'en'
                 ? `第 ${consultationNumber} 次診症`
                 : `Visit ${consultationNumber}`;
-            const totalText = lang === 'zh'
+            const totalText = lang !== 'en'
                 ? `共 ${totalPages} 次診症記錄`
                 : `Total ${totalPages} consultation records`;
             const prevLabel = dict['較舊'] || '較舊';
@@ -10581,10 +10736,10 @@ function displayConsultationMedicalHistoryPage() {
     // dictionary lookup is used for static terms like '診症記錄',
     // '較舊', '較新', '醫師：', and '病歷編號：'.
     const recordTitle = dict['診症記錄'] || '診症記錄';
-    const visitText = lang === 'zh'
+    const visitText = lang !== 'en'
         ? `第 ${consultationNumber} 次診症`
         : `Visit ${consultationNumber}`;
-    const totalText = lang === 'zh'
+    const totalText = lang !== 'en'
         ? `共 ${totalPages} 次診症記錄`
         : `Total ${totalPages} consultation records`;
     const prevLabel = dict['較舊'] || '較舊';
@@ -11230,6 +11385,8 @@ async function printConsultationRecord(consultationId, consultationData = null) 
             contactCounter: isEnglish ? 'If you have any questions, please contact the counter' : '如有疑問請洽櫃檯'
         };
         const clinicPrint = await resolveClinicSettingsByConsultation(consultation);
+        const receiptVisibility = mergeReceiptVisibilitySettings(clinicPrint && clinicPrint.receiptFieldVisibility).receipt;
+        const customThankYouText = (clinicPrint && clinicPrint.receiptThankYouText) ? String(clinicPrint.receiptThankYouText).trim() : '';
         // Construct receipt HTML with localized labels
         const printContent = `
             <!DOCTYPE html>
@@ -11402,22 +11559,29 @@ async function printConsultationRecord(consultationId, consultationData = null) 
                     
                     <!-- Basic Information -->
                     <div class="receipt-info">
+                        ${receiptVisibility.receiptNo ? `
                         <div class="info-row">
                             <span class="info-label">${TR.receiptNo}${colon}</span>
                             <span>R${consultation.id.toString().padStart(6, '0')}</span>
                         </div>
+                        ` : ''}
                         <div class="info-row">
                             <span class="info-label">${TR.patientName}${colon}</span>
                             <span>${patient.name}</span>
                         </div>
+                        ${receiptVisibility.medicalRecordNo ? `
                         <div class="info-row">
                             <span class="info-label">${TR.medicalRecordNo}${colon}</span>
                             <span>${consultation.medicalRecordNumber || consultation.id}</span>
                         </div>
+                        ` : ''}
+                        ${receiptVisibility.patientNumber ? `
                         <div class="info-row">
                             <span class="info-label">${TR.patientNumber}${colon}</span>
-                            <span>${patient.patientNumber}</span>
+                            <span>${patient.patientNumber || '-'}</span>
                         </div>
+                        ` : ''}
+                        ${receiptVisibility.consultationDate ? `
                         <div class="info-row">
                             <span class="info-label">${TR.consultationDate}${colon}</span>
                             <span>${consultationDate.toLocaleDateString(dateLocale, {
@@ -11426,6 +11590,8 @@ async function printConsultationRecord(consultationId, consultationData = null) 
                                 day: '2-digit'
                             })}</span>
                         </div>
+                        ` : ''}
+                        ${receiptVisibility.consultationTime ? `
                         <div class="info-row">
                             <span class="info-label">${TR.consultationTime}${colon}</span>
                             <span>${consultationDate.toLocaleTimeString(dateLocale, {
@@ -11433,6 +11599,7 @@ async function printConsultationRecord(consultationId, consultationData = null) 
                                 minute: '2-digit'
                             })}</span>
                         </div>
+                        ` : ''}
                         <div class="info-row">
                             <span class="info-label">${TR.doctorName}${colon}</span>
                             <span>${getDoctorDisplayName(consultation.doctor)}</span>
@@ -11631,7 +11798,7 @@ async function printConsultationRecord(consultationId, consultationData = null) 
                     
                     <!-- Thank You -->
                     <div class="thank-you">
-                        ${TR.thankYou}
+                        ${customThankYouText || TR.thankYou}
                     </div>
                     
                     <!-- Footer -->
@@ -12904,6 +13071,7 @@ async function printPrescriptionInstructions(consultationId, consultationData = 
             contact: isEnglish ? 'If you have any questions, please contact the front desk.' : '如有疑問請洽櫃檯'
         };
         const clinicPrint = await resolveClinicSettingsByConsultation(consultation);
+        const prescriptionVisibility = mergeReceiptVisibilitySettings(clinicPrint && clinicPrint.receiptFieldVisibility).prescription;
         // 構建列印內容
         const printContent = `
             <!DOCTYPE html>
@@ -13026,10 +13194,10 @@ async function printPrescriptionInstructions(consultationId, consultationData = 
                     <div class="advice-title">${PI.title}</div>
                     <div class="patient-info">
                         <div class="info-row"><span class="info-label">${PI.patientName}${colon}</span><span>${patient.name}</span></div>
-                        <div class="info-row"><span class="info-label">${PI.medicalRecordNo}${colon}</span><span>${consultation.medicalRecordNumber || consultation.id}</span></div>
-                        ${patient.patientNumber ? `<div class="info-row"><span class="info-label">${PI.patientNo}${colon}</span><span>${patient.patientNumber}</span></div>` : ''}
-                        <div class="info-row"><span class="info-label">${PI.consultationDate}${colon}</span><span>${consultationDate.toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' })}</span></div>
-                        <div class="info-row"><span class="info-label">${PI.consultationTime}${colon}</span><span>${consultationDate.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}</span></div>
+                        ${prescriptionVisibility.medicalRecordNo ? `<div class="info-row"><span class="info-label">${PI.medicalRecordNo}${colon}</span><span>${consultation.medicalRecordNumber || consultation.id}</span></div>` : ''}
+                        ${prescriptionVisibility.patientNumber ? `<div class="info-row"><span class="info-label">${PI.patientNo}${colon}</span><span>${patient.patientNumber || '-'}</span></div>` : ''}
+                        ${prescriptionVisibility.consultationDate ? `<div class="info-row"><span class="info-label">${PI.consultationDate}${colon}</span><span>${consultationDate.toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' })}</span></div>` : ''}
+                        ${prescriptionVisibility.consultationTime ? `<div class="info-row"><span class="info-label">${PI.consultationTime}${colon}</span><span>${consultationDate.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
                         <div class="info-row"><span class="info-label">${PI.doctor}${colon}</span><span>${getDoctorDisplayName(consultation.doctor)}</span></div>
                         ${(() => {
                             const regNumber = getDoctorRegistrationNumber(consultation.doctor);
@@ -13422,6 +13590,15 @@ async function editMedicalRecord(appointmentId) {
         const appointment = appointments.find(apt => apt && String(apt.id) === String(appointmentId));
         if (!appointment) {
             showToast('找不到掛號記錄！', 'error');
+            return;
+        }
+        const isAdminUser = currentUserData && currentUserData.position === '診所管理';
+        const isAppointmentDoctor = currentUserData &&
+            currentUserData.position === '醫師' &&
+            appointment.appointmentDoctor === currentUserData.username;
+        const canEditMedicalRecord = isAdminUser || isAppointmentDoctor;
+        if (!canEditMedicalRecord) {
+            showToast('您沒有修改病歷的權限！', 'error');
             return;
         }
         // 使用 forceRefresh=true 以確保跨裝置同步取得最新病人資料
@@ -14135,6 +14312,79 @@ async function initializeSystemAfterLogin() {
 
 
         // 診所設定管理功能
+        const RECEIPT_CUSTOM_FIELDS = ['receiptNo', 'medicalRecordNo', 'patientNumber', 'consultationDate', 'consultationTime'];
+        const PRESCRIPTION_CUSTOM_FIELDS = ['medicalRecordNo', 'patientNumber', 'consultationDate', 'consultationTime'];
+
+        function getDefaultReceiptVisibilitySettings() {
+            return {
+                receipt: {
+                    receiptNo: true,
+                    medicalRecordNo: true,
+                    patientNumber: true,
+                    consultationDate: true,
+                    consultationTime: true
+                },
+                prescription: {
+                    receiptNo: false,
+                    medicalRecordNo: true,
+                    patientNumber: true,
+                    consultationDate: true,
+                    consultationTime: true
+                }
+            };
+        }
+
+        function mergeReceiptVisibilitySettings(rawSettings) {
+            const defaults = getDefaultReceiptVisibilitySettings();
+            const merged = {
+                receipt: { ...defaults.receipt },
+                prescription: { ...defaults.prescription }
+            };
+            const receiptSource = rawSettings && rawSettings.receipt;
+            if (receiptSource && typeof receiptSource === 'object') {
+                RECEIPT_CUSTOM_FIELDS.forEach((field) => {
+                    if (typeof receiptSource[field] === 'boolean') merged.receipt[field] = receiptSource[field];
+                });
+            }
+            const prescriptionSource = rawSettings && rawSettings.prescription;
+            if (prescriptionSource && typeof prescriptionSource === 'object') {
+                PRESCRIPTION_CUSTOM_FIELDS.forEach((field) => {
+                    if (typeof prescriptionSource[field] === 'boolean') merged.prescription[field] = prescriptionSource[field];
+                });
+            }
+            return merged;
+        }
+
+        function getClinicReceiptVisibilitySettings() {
+            return mergeReceiptVisibilitySettings(clinicSettings && clinicSettings.receiptFieldVisibility);
+        }
+
+        function applyReceiptCustomizationUI() {
+            const settings = getClinicReceiptVisibilitySettings();
+            RECEIPT_CUSTOM_FIELDS.forEach((field) => {
+                const receiptEl = document.getElementById(`receiptField_${field}`);
+                if (receiptEl) receiptEl.checked = !!settings.receipt[field];
+            });
+            PRESCRIPTION_CUSTOM_FIELDS.forEach((field) => {
+                const prescriptionEl = document.getElementById(`prescriptionField_${field}`);
+                if (prescriptionEl) prescriptionEl.checked = !!settings.prescription[field];
+            });
+        }
+
+        function collectReceiptCustomizationUI() {
+            const settings = { receipt: {}, prescription: {} };
+            RECEIPT_CUSTOM_FIELDS.forEach((field) => {
+                const receiptEl = document.getElementById(`receiptField_${field}`);
+                settings.receipt[field] = !!(receiptEl && receiptEl.checked);
+            });
+            PRESCRIPTION_CUSTOM_FIELDS.forEach((field) => {
+                const prescriptionEl = document.getElementById(`prescriptionField_${field}`);
+                settings.prescription[field] = !!(prescriptionEl && prescriptionEl.checked);
+            });
+            settings.prescription.receiptNo = false;
+            return settings;
+        }
+
         function showClinicSettingsModal() {
             // 載入現有設定
             document.getElementById('clinicChineseName').value = clinicSettings.chineseName || '';
@@ -14142,6 +14392,8 @@ async function initializeSystemAfterLogin() {
             document.getElementById('clinicBusinessHours').value = clinicSettings.businessHours || '';
             document.getElementById('clinicPhone').value = clinicSettings.phone || '';
             document.getElementById('clinicAddress').value = clinicSettings.address || '';
+            const thankYouInput = document.getElementById('clinicReceiptThankYouText');
+            if (thankYouInput) thankYouInput.value = clinicSettings.receiptThankYouText || '';
             
             try { populateClinicSelectors(); } catch (_e) {}
             document.getElementById('clinicSettingsModal').classList.remove('hidden');
@@ -14157,6 +14409,8 @@ async function initializeSystemAfterLogin() {
             const businessHours = document.getElementById('clinicBusinessHours').value.trim();
             const phone = document.getElementById('clinicPhone').value.trim();
             const address = document.getElementById('clinicAddress').value.trim();
+            const thankYouInput = document.getElementById('clinicReceiptThankYouText');
+            const receiptThankYouText = thankYouInput ? thankYouInput.value.trim() : '';
             
             if (!chineseName) {
                 showToast('請輸入診所中文名稱！', 'error');
@@ -14168,10 +14422,19 @@ async function initializeSystemAfterLogin() {
             clinicSettings.businessHours = businessHours;
             clinicSettings.phone = phone;
             clinicSettings.address = address;
+            clinicSettings.receiptThankYouText = receiptThankYouText;
             clinicSettings.updatedAt = new Date().toISOString();
             try {
                 if (currentClinicId) {
-                    await window.firebaseDataManager.updateClinic(currentClinicId, clinicSettings);
+                    await window.firebaseDataManager.updateClinic(currentClinicId, {
+                        chineseName,
+                        englishName,
+                        businessHours,
+                        phone,
+                        address,
+                        receiptThankYouText,
+                        updatedAt: clinicSettings.updatedAt
+                    });
                     const listRes = await window.firebaseDataManager.getClinics();
                     clinicsList = listRes && listRes.success && Array.isArray(listRes.data) ? listRes.data : clinicsList;
                     updateClinicSettingsDisplay();
@@ -14227,6 +14490,28 @@ async function initializeSystemAfterLogin() {
             }
             if (welcomeEnglishTitle) {
                 welcomeEnglishTitle.textContent = `Welcome to ${clinicSettings.englishName || 'Dr.Great Clinic'}`;
+            }
+            applyReceiptCustomizationUI();
+        }
+
+        async function saveReceiptCustomizationSettings() {
+            if (!currentClinicId) {
+                showToast('未選擇診所', 'error');
+                return;
+            }
+            try {
+                clinicSettings.receiptFieldVisibility = collectReceiptCustomizationUI();
+                clinicSettings.updatedAt = new Date().toISOString();
+                await window.firebaseDataManager.updateClinic(currentClinicId, {
+                    receiptFieldVisibility: clinicSettings.receiptFieldVisibility,
+                    updatedAt: clinicSettings.updatedAt
+                });
+                const listRes = await window.firebaseDataManager.getClinics();
+                clinicsList = listRes && listRes.success && Array.isArray(listRes.data) ? listRes.data : clinicsList;
+                showToast('收據自定義設定已儲存', 'success');
+            } catch (e) {
+                console.error('儲存收據自定義設定失敗:', e);
+                showToast('儲存收據自定義設定失敗', 'error');
             }
         }
 
@@ -16169,11 +16454,12 @@ async function initializeSystemAfterLogin() {
                 id: itemId,
                 type: type,
                 name: item.name,
-                // When adding a new item to the prescription, default the dosage based on the item type.
-                // Herbs default to 1 g; formulas do not use the `dosage` field for display purposes and remain null.
                 dosage: type === 'herb' ? (item.dosage || '1g') : null,
-                // Set the custom dosage default based on the item type: 1 g for herbs, 5 g for formulas.
-                customDosage: type === 'herb' ? '1' : '5',
+                customDosage: (() => {
+                    const inv = getHerbInventory(item.id);
+                    const dose = resolvePrescriptionDefaultDosage(item, inv);
+                    return String(dose);
+                })(),
                 composition: type === 'formula' ? item.composition : null,
                 effects: item.effects
             };
@@ -18898,6 +19184,28 @@ async function deleteUser(id) {
 // 財務報表功能
         let currentFinancialTabType = 'summary';
         const financialReportCache = {};
+        const FINANCIAL_REPORT_MIN_REFRESH_MS = 15000;
+        let financialReportLastRunAt = 0;
+        let financialReportLastKey = '';
+
+        function setFinancialReportLoadingState() {
+            const loadingRow = (colspan) => `
+                <tr>
+                    <td colspan="${colspan}" class="px-4 py-8 text-center text-gray-500">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                        <div class="mt-2">載入中...</div>
+                    </td>
+                </tr>
+            `;
+            const summaryBody = document.getElementById('financialSummaryTableBody');
+            const dailyBody = document.getElementById('financialDailyTableBody');
+            const doctorBody = document.getElementById('financialDoctorTableBody');
+            const serviceBody = document.getElementById('financialServiceTableBody');
+            if (summaryBody) summaryBody.innerHTML = loadingRow(4);
+            if (dailyBody) dailyBody.innerHTML = loadingRow(5);
+            if (doctorBody) doctorBody.innerHTML = loadingRow(5);
+            if (serviceBody) serviceBody.innerHTML = loadingRow(5);
+        }
         
         // 載入財務報表頁面
         async function loadFinancialReports() {
@@ -18914,6 +19222,7 @@ async function deleteUser(id) {
                 await loadUsersForFinancial();
             }
             if (typeof loadConsultationsForFinancial === 'function') {
+                setFinancialReportLoadingState();
                 await loadConsultationsForFinancial();
             }
             // 載入醫師選項
@@ -19007,14 +19316,17 @@ async function deleteUser(id) {
                 return;
             }
             try {
+                setFinancialReportLoadingState();
                 const startEl = document.getElementById('startDate');
                 const endEl = document.getElementById('endDate');
                 const doctorEl = document.getElementById('doctorFilter');
+                const clinicEl = document.getElementById('clinicFilterFinancial');
                 if (startEl && endEl) {
                     const startVal = startEl.value;
                     const endVal = endEl.value;
                     const doctorVal = doctorEl ? doctorEl.value : '';
-                    const targeted = await window.firebaseDataManager.getConsultationsByRangeAndDoctor(startVal, endVal, doctorVal || null, true);
+                    const clinicVal = clinicEl ? clinicEl.value : '';
+                    const targeted = await window.firebaseDataManager.getConsultationsByRangeAndDoctor(startVal, endVal, doctorVal || null, true, clinicVal || null);
                     if (targeted && targeted.success) {
                         consultations = targeted.data.map(item => {
                             let dateStr = null;
@@ -19031,40 +19343,13 @@ async function deleteUser(id) {
                                     dateStr = item.createdAt;
                                 }
                             }
-                            return { id: item.id, date: dateStr, doctor: item.doctor, status: item.status, billingItems: item.billingItems, clinicId: item.clinicId || null, clinicName: item.clinicName || '', prescription: item.prescription, acupunctureNotes: item.acupunctureNotes, createdAt: item.createdAt, updatedAt: item.updatedAt };
+                            return { id: item.id, date: dateStr, doctor: item.doctor, status: item.status, billingItems: item.billingItems, billingItemsStructured: item.billingItemsStructured || '[]', clinicId: item.clinicId || null, clinicName: item.clinicName || '', prescription: item.prescription, acupunctureNotes: item.acupunctureNotes, createdAt: item.createdAt, updatedAt: item.updatedAt };
                         });
                         return;
                     }
                 }
-                let res = await window.firebaseDataManager.getConsultations(true);
-                        if (res && res.success) {
-                            let all = res.data;
-                            while (res.hasMore) {
-                                res = await window.firebaseDataManager.getConsultationsNextPage();
-                                if (res && res.success && Array.isArray(res.data)) {
-                                    all = res.data;
-                                } else {
-                                    break;
-                                }
-                            }
-                            consultations = all.map(item => {
-                                let dateStr = null;
-                                if (item.date) {
-                                    if (typeof item.date === 'object' && item.date.seconds) {
-                                        dateStr = new Date(item.date.seconds * 1000).toISOString();
-                                    } else {
-                                        dateStr = item.date;
-                                    }
-                                } else if (item.createdAt) {
-                                    if (typeof item.createdAt === 'object' && item.createdAt.seconds) {
-                                        dateStr = new Date(item.createdAt.seconds * 1000).toISOString();
-                                    } else {
-                                        dateStr = item.createdAt;
-                                    }
-                                }
-                                return { ...item, date: dateStr, clinicId: item.clinicId || null, clinicName: item.clinicName || '' };
-                            });
-                        }
+                // 取消全量回退載入：避免財務報表在索引問題時掃描整個 consultations 集合。
+                consultations = [];
                     } catch (error) {
                         console.error('載入 Firebase 診症資料失敗:', error);
                     }
@@ -19166,12 +19451,55 @@ async function deleteUser(id) {
             }
         }
 
-        // 解析收費項目文本
-        function parseFinancialBillingItems(billingText) {
+        // 標準化財務類別代碼
+        function normalizeFinancialCategory(category) {
+            const raw = String(category || '').trim();
+            if (!raw) return '';
+            const key = raw.toLowerCase();
+            const map = {
+                consultation: 'consultation',
+                medicine: 'medicine',
+                treatment: 'treatment',
+                other: 'other',
+                discount: 'discount',
+                package: 'package',
+                packageuse: 'packageUse',
+                package_use: 'packageUse'
+            };
+            return map[key] || '';
+        }
+
+        // 解析收費項目文本（優先使用結構化 category，金額仍以文字明細為準）
+        function parseFinancialBillingItems(consultationData) {
             const items = [];
-            const lines = billingText.split('\n');
+            const consultationObj = consultationData && typeof consultationData === 'object' ? consultationData : null;
+            const billingText = consultationObj ? (consultationObj.billingItems || '') : (consultationData || '');
+            const lines = String(billingText || '').split('\n');
             let totalAmount = 0;
             let totalAmountSum = 0;
+            const categoryQueueByName = {};
+
+            // 先從結構化資料建立「同名項目依序取用」的類別映射，避免名稱關鍵字誤判。
+            try {
+                const structuredRaw = consultationObj ? consultationObj.billingItemsStructured : null;
+                const structuredItems = typeof structuredRaw === 'string'
+                    ? JSON.parse(structuredRaw || '[]')
+                    : (Array.isArray(structuredRaw) ? structuredRaw : []);
+                if (Array.isArray(structuredItems)) {
+                    structuredItems.forEach(rawItem => {
+                        if (!rawItem) return;
+                        const itemName = rawItem.name ? String(rawItem.name).trim() : '';
+                        if (!itemName) return;
+                        const normalizedCategory = normalizeFinancialCategory(rawItem.category) || getFinancialCategoryFromItemName(itemName);
+                        if (!categoryQueueByName[itemName]) {
+                            categoryQueueByName[itemName] = [];
+                        }
+                        categoryQueueByName[itemName].push(normalizedCategory);
+                    });
+                }
+            } catch (_e) {
+                // 若結構化資料格式異常，沿用名稱推斷作為回退。
+            }
 
             lines.forEach(line => {
                 line = line.trim();
@@ -19194,13 +19522,17 @@ async function deleteUser(id) {
                     const rawAmount = (itemMatch[3] || '').trim();
                     const amountNumber = parseInt(rawAmount.replace(/[^\d]/g, ''), 10) || 0;
                     const signedAmount = rawAmount.includes('-') ? -amountNumber : amountNumber;
+                    const mappedQueue = categoryQueueByName[itemName];
+                    const mappedCategory = Array.isArray(mappedQueue) && mappedQueue.length > 0
+                        ? mappedQueue.shift()
+                        : '';
 
                     items.push({
                         name: itemName,
                         quantity: quantity,
                         unitPrice: quantity ? Math.abs(signedAmount / quantity) : 0,
                         totalAmount: signedAmount,
-                        category: getFinancialCategoryFromItemName(itemName)
+                        category: mappedCategory || getFinancialCategoryFromItemName(itemName)
                     });
                     totalAmountSum += signedAmount;
                 }
@@ -19248,21 +19580,33 @@ async function deleteUser(id) {
                 return;
             }
 
+            setFinancialReportLoadingState();
+
             const cacheKey = `${startDate}|${endDate}|${doctorFilter||''}|${clinicFilter||''}`;
             const existing = financialReportCache[cacheKey] || readCache('financialReportCache', cacheKey);
+            const nowTs = Date.now();
+            if (existing && financialReportLastKey === cacheKey && (nowTs - financialReportLastRunAt) < FINANCIAL_REPORT_MIN_REFRESH_MS) {
+                updateFinancialKeyMetrics(existing.stats);
+                updateFinancialTables(existing.filteredConsultations, existing.stats);
+                document.getElementById('lastUpdateTime').textContent = new Date().toLocaleString('zh-TW');
+                showToast('財務報表已更新（短時間內使用快取）', 'success');
+                return;
+            }
             if (existing) {
                 try {
                     if (window.firebaseDataManager && typeof window.firebaseDataManager.hasConsultationUpdates === 'function') {
                         const lastSyncAtRef = existing.lastSyncAt ? new Date(existing.lastSyncAt) : null;
-                        const hasUpdates = await window.firebaseDataManager.hasConsultationUpdates(startDate, endDate, doctorFilter || null, lastSyncAtRef);
+                        const hasUpdates = await window.firebaseDataManager.hasConsultationUpdates(startDate, endDate, doctorFilter || null, lastSyncAtRef, clinicFilter || null);
                         if (!hasUpdates) {
                             updateFinancialKeyMetrics(existing.stats);
                             updateFinancialTables(existing.filteredConsultations, existing.stats);
                             document.getElementById('lastUpdateTime').textContent = new Date().toLocaleString('zh-TW');
+                            financialReportLastKey = cacheKey;
+                            financialReportLastRunAt = Date.now();
                             showToast('財務報表已更新（使用快取）！', 'success');
                             return;
                         }
-                        const deltaRes = await window.firebaseDataManager.getConsultationsDeltaByRangeAndDoctor(lastSyncAtRef, doctorFilter || null, true);
+                        const deltaRes = await window.firebaseDataManager.getConsultationsDeltaByRangeAndDoctor(lastSyncAtRef, doctorFilter || null, true, clinicFilter || null);
                         if (deltaRes && deltaRes.success) {
                             const normalize = (item) => {
                                 let dateStr = null;
@@ -19279,7 +19623,7 @@ async function deleteUser(id) {
                                         dateStr = item.createdAt;
                                     }
                                 }
-                                return { id: item.id, date: dateStr, doctor: item.doctor, status: item.status, billingItems: item.billingItems, clinicId: item.clinicId || null, clinicName: item.clinicName || '', createdAt: item.createdAt, updatedAt: item.updatedAt };
+                                return { id: item.id, date: dateStr, doctor: item.doctor, status: item.status, billingItems: item.billingItems, billingItemsStructured: item.billingItemsStructured || '[]', clinicId: item.clinicId || null, clinicName: item.clinicName || '', createdAt: item.createdAt, updatedAt: item.updatedAt };
                             };
                             const deltas = deltaRes.data.map(normalize);
                             const start = new Date(startDate);
@@ -19304,7 +19648,7 @@ async function deleteUser(id) {
                             const merged = Array.from(index.values());
                             const stats = calculateFinancialStatistics(merged);
                             const mlist = monthsInDateRange(startDate, endDate);
-                            const exp = await getClinicExpensesByMonths(mlist);
+                            const exp = await getClinicExpensesByMonths(mlist, clinicFilter || null);
                             stats.totalCost = exp.totalCost;
                             stats.netRevenue = stats.totalRevenue - exp.totalCost;
                             updateFinancialKeyMetrics(stats);
@@ -19322,6 +19666,8 @@ async function deleteUser(id) {
                             const entry = { filteredConsultations: merged, stats, lastSyncAt: lastSyncAt.toISOString() };
                             financialReportCache[cacheKey] = entry;
                             writeCache('financialReportCache', cacheKey, entry);
+                            financialReportLastKey = cacheKey;
+                            financialReportLastRunAt = Date.now();
                             document.getElementById('lastUpdateTime').textContent = new Date().toLocaleString('zh-TW');
                             showToast('財務報表已更新！', 'success');
                             return;
@@ -19343,7 +19689,7 @@ async function deleteUser(id) {
             // 計算統計資料
             const stats = calculateFinancialStatistics(filteredConsultations);
             const mlist = monthsInDateRange(startDate, endDate);
-            const exp = await getClinicExpensesByMonths(mlist);
+            const exp = await getClinicExpensesByMonths(mlist, clinicFilter || null);
             stats.totalCost = exp.totalCost;
             stats.netRevenue = stats.totalRevenue - exp.totalCost;
             
@@ -19363,6 +19709,8 @@ async function deleteUser(id) {
             const entry = { filteredConsultations, stats, lastSyncAt: lastSyncAt.toISOString() };
             financialReportCache[cacheKey] = entry;
             writeCache('financialReportCache', cacheKey, entry);
+            financialReportLastKey = cacheKey;
+            financialReportLastRunAt = Date.now();
             document.getElementById('lastUpdateTime').textContent = new Date().toLocaleString('zh-TW');
             showToast('財務報表已更新！', 'success');
         }
@@ -19392,7 +19740,7 @@ async function deleteUser(id) {
             const dailyStats = {};
 
             consultations.forEach(consultation => {
-                const parsed = parseFinancialBillingItems(consultation.billingItems || '');
+                const parsed = parseFinancialBillingItems(consultation);
                 const consultationRevenue = parsed.totalAmount;
                 totalRevenue += consultationRevenue;
 
@@ -19492,6 +19840,7 @@ async function deleteUser(id) {
                 { item: '治療費收入', amount: 0, category: 'treatment' },
                 { item: '其他收入', amount: 0, category: 'other' },
                 { item: '套票收入', amount: 0, category: 'package' },
+                { item: '套票扣減', amount: 0, category: 'packageUse' },
                 { item: '折扣/優惠', amount: 0, category: 'discount' }
             ];
 
@@ -19652,10 +20001,9 @@ async function deleteUser(id) {
         }
 
         // 匯出財務報表
-async function exportFinancialReport() {
+async function buildFinancialExportPayload() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    // 嘗試取得報表類型：舊的 reportType 元素可能不存在，改用 quickDate 文字或值
     let reportType = '';
     const rptElem = document.getElementById('reportType');
     if (rptElem) {
@@ -19663,79 +20011,77 @@ async function exportFinancialReport() {
     } else {
         const quickDateElem = document.getElementById('quickDate');
         if (quickDateElem) {
-            // 使用選項的顯示文字，若沒有則使用值
             const selIndex = quickDateElem.selectedIndex;
-            if (selIndex >= 0) {
-                reportType = quickDateElem.options[selIndex].text || quickDateElem.value;
-            } else {
-                reportType = quickDateElem.value;
-            }
+            if (selIndex >= 0) reportType = quickDateElem.options[selIndex].text || quickDateElem.value;
+            else reportType = quickDateElem.value;
         }
     }
-    // 取得醫師篩選條件（若有）
     let doctorFilter = '';
     const doctorFilterInput = document.getElementById('doctorFilter');
-    if (doctorFilterInput) {
-        doctorFilter = doctorFilterInput.value;
-    }
+    if (doctorFilterInput) doctorFilter = doctorFilterInput.value;
     let clinicFilter = '';
     const clinicFilterInput = document.getElementById('clinicFilterFinancial');
-    if (clinicFilterInput) {
-        clinicFilter = clinicFilterInput.value;
-    }
-    // 過濾診症資料並計算統計以生成更詳細的報表
+    if (clinicFilterInput) clinicFilter = clinicFilterInput.value;
     const filteredConsultations = filterFinancialConsultations(startDate, endDate, doctorFilter, clinicFilter);
     const stats = calculateFinancialStatistics(filteredConsultations);
     const months = monthsInDateRange(startDate, endDate);
     let totalCost = 0;
     let byType = {};
     try {
-        const exp = await getClinicExpensesByMonths(months);
+        const exp = await getClinicExpensesByMonths(months, clinicFilter || null);
         totalCost = exp && typeof exp.totalCost === 'number' ? exp.totalCost : 0;
         byType = exp && exp.byType ? exp.byType : {};
     } catch (_e) {
         totalCost = 0;
         byType = {};
     }
-    // 準備各區塊文字
+    const clinicOpt = clinicFilter ? (Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(clinicFilter)) : null) : null;
+    const clinicName = clinicOpt ? (clinicOpt.chineseName || clinicOpt.englishName || clinicOpt.id) : clinicFilter;
+    return {
+        startDate,
+        endDate,
+        reportType,
+        doctorFilter,
+        clinicFilter,
+        clinicName,
+        filteredConsultations,
+        stats,
+        totalCost,
+        byType,
+        generatedAt: new Date().toLocaleString('zh-TW')
+    };
+}
+
+async function exportFinancialReportTxt() {
+    const data = await buildFinancialExportPayload();
+    const { startDate, endDate, reportType, doctorFilter, clinicFilter, clinicName, stats, totalCost, byType } = data;
     const doctorLines = Object.keys(stats.doctorStats).map(key => {
-        const data = stats.doctorStats[key];
+        const d = stats.doctorStats[key];
         const doctorName = key || '未知醫師';
-        return `${doctorName}: 次數 ${data.count.toLocaleString()}，收入 $${data.revenue.toLocaleString()}`;
+        return `${doctorName}: 次數 ${d.count.toLocaleString()}，收入 $${d.revenue.toLocaleString()}`;
     }).join('\n');
-    const serviceLines = Object.values(stats.serviceStats).map(item => {
-        return `${item.name}: 次數 ${item.count.toLocaleString()}，收入 $${item.revenue.toLocaleString()}`;
-    }).join('\n');
+    const serviceLines = Object.values(stats.serviceStats).map(item => `${item.name}: 次數 ${item.count.toLocaleString()}，收入 $${item.revenue.toLocaleString()}`).join('\n');
     const dailyLines = Object.keys(stats.dailyStats).map(dateKey => {
-        const data = stats.dailyStats[dateKey];
-        return `${dateKey}: 次數 ${data.count.toLocaleString()}，收入 $${data.revenue.toLocaleString()}`;
+        const d = stats.dailyStats[dateKey];
+        return `${dateKey}: 次數 ${d.count.toLocaleString()}，收入 $${d.revenue.toLocaleString()}`;
     }).join('\n');
-    // 組合文字報表
     let textReport = '';
-    if (doctorFilter) {
-        textReport += `選擇醫師: ${doctorFilter}\n`;
-    }
-    if (clinicFilter) {
-        const clinicOpt = (Array.isArray(clinicsList) ? clinicsList.find(c => String(c.id) === String(clinicFilter)) : null);
-        const clinicName = clinicOpt ? (clinicOpt.chineseName || clinicOpt.englishName || clinicOpt.id) : clinicFilter;
-        textReport += `選擇診所: ${clinicName}\n`;
-    }
+    if (doctorFilter) textReport += `選擇醫師: ${doctorFilter}\n`;
+    if (clinicFilter) textReport += `選擇診所: ${clinicName}\n`;
     textReport += `報表標題: 財務報表 - ${reportType}\n`;
     textReport += `期間: ${startDate} 至 ${endDate}\n`;
-    textReport += `生成時間: ${new Date().toLocaleString('zh-TW')}\n`;
+    textReport += `生成時間: ${data.generatedAt}\n`;
     textReport += `總收入(未扣成本): $${stats.totalRevenue.toLocaleString()}\n`;
     textReport += `總成本: $${totalCost.toLocaleString()}\n`;
-    const netRevenue = stats.totalRevenue - totalCost;
-    textReport += `淨收入: $${netRevenue.toLocaleString()}\n`;
+    textReport += `淨收入: $${(stats.totalRevenue - totalCost).toLocaleString()}\n`;
     textReport += `總診症數: ${stats.totalConsultations.toLocaleString()}\n`;
     textReport += `平均收入: $${Math.round(stats.averageRevenue).toLocaleString()}\n`;
     textReport += `有效醫師數: ${stats.activeDoctors.toLocaleString()}\n\n`;
     textReport += `醫師統計:\n${doctorLines || '無資料'}\n\n`;
     textReport += `服務分類統計:\n${serviceLines || '無資料'}\n\n`;
     textReport += `每日統計:\n${dailyLines || '無資料'}\n`;
-    const costLines = Object.keys(byType).map(t => `${t}: $${Number(byType[t]||0).toLocaleString()}`).join('\n');
+    const costLines = Object.keys(byType).map(t => `${t}: $${Number(byType[t] || 0).toLocaleString()}`).join('\n');
     textReport += `\n成本統計:\n${costLines || '無資料'}\n`;
-    // 創建下載為純文字檔案
     const blob = new Blob([textReport], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -19745,7 +20091,83 @@ async function exportFinancialReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('財務報表已匯出！', 'success');
+    showToast('財務報表 TXT 已匯出！', 'success');
+}
+
+async function exportFinancialReportExcel() {
+    const data = await buildFinancialExportPayload();
+    const { startDate, endDate, reportType, doctorFilter, clinicFilter, clinicName, stats, totalCost, byType } = data;
+    const esc = (value) => {
+        const str = String(value == null ? '' : value);
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+    const doctorRows = Object.keys(stats.doctorStats).map(key => {
+        const d = stats.doctorStats[key];
+        return `<tr><td>${esc(key || '未知醫師')}</td><td>${d.count}</td><td>${d.revenue}</td></tr>`;
+    }).join('');
+    const serviceRows = Object.values(stats.serviceStats).map(item => {
+        return `<tr><td>${esc(item.name)}</td><td>${item.count}</td><td>${item.revenue}</td></tr>`;
+    }).join('');
+    const dailyRows = Object.keys(stats.dailyStats).map(dateKey => {
+        const d = stats.dailyStats[dateKey];
+        return `<tr><td>${esc(dateKey)}</td><td>${d.count}</td><td>${d.revenue}</td></tr>`;
+    }).join('');
+    const costRows = Object.keys(byType).map(type => {
+        const amount = Number(byType[type] || 0);
+        return `<tr><td>${esc(type)}</td><td>${amount}</td></tr>`;
+    }).join('');
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+th, td { border: 1px solid #ccc; padding: 6px; font-size: 12px; }
+th { background: #f3f4f6; }
+h2, h3 { margin: 8px 0; }
+</style>
+</head>
+<body>
+<h2>財務報表</h2>
+<table>
+<tr><th>欄位</th><th>內容</th></tr>
+<tr><td>報表標題</td><td>${esc(reportType)}</td></tr>
+<tr><td>期間</td><td>${esc(startDate)} 至 ${esc(endDate)}</td></tr>
+<tr><td>生成時間</td><td>${esc(data.generatedAt)}</td></tr>
+<tr><td>選擇醫師</td><td>${esc(doctorFilter || '全部醫師')}</td></tr>
+<tr><td>選擇診所</td><td>${esc(clinicFilter ? clinicName : '全部診所')}</td></tr>
+<tr><td>總收入(未扣成本)</td><td>${stats.totalRevenue}</td></tr>
+<tr><td>總成本</td><td>${totalCost}</td></tr>
+<tr><td>淨收入</td><td>${stats.totalRevenue - totalCost}</td></tr>
+<tr><td>總診症數</td><td>${stats.totalConsultations}</td></tr>
+<tr><td>平均收入</td><td>${Math.round(stats.averageRevenue)}</td></tr>
+<tr><td>有效醫師數</td><td>${stats.activeDoctors}</td></tr>
+</table>
+<h3>醫師統計</h3>
+<table><tr><th>醫師</th><th>次數</th><th>收入</th></tr>${doctorRows || '<tr><td colspan="3">無資料</td></tr>'}</table>
+<h3>服務分類統計</h3>
+<table><tr><th>服務類型</th><th>次數</th><th>收入</th></tr>${serviceRows || '<tr><td colspan="3">無資料</td></tr>'}</table>
+<h3>每日統計</h3>
+<table><tr><th>日期</th><th>次數</th><th>收入</th></tr>${dailyRows || '<tr><td colspan="3">無資料</td></tr>'}</table>
+<h3>成本統計</h3>
+<table><tr><th>成本類型</th><th>金額</th></tr>${costRows || '<tr><td colspan="2">無資料</td></tr>'}</table>
+</body>
+</html>`;
+    const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `財務報表_${startDate}_${endDate}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('財務報表 Excel 已匯出！', 'success');
 }
 
 function monthsInDateRange(startDateStr, endDateStr) {
@@ -19763,21 +20185,52 @@ function monthsInDateRange(startDateStr, endDateStr) {
     return list;
 }
 
-async function getClinicExpensesByMonths(months) {
+async function getClinicExpensesByMonths(months, clinicId = null) {
     await waitForFirebaseDb();
-    const snapshot = await window.firebase.getDocs(window.firebase.collection(window.firebase.db, 'clinicExpenses'));
+    const validMonths = Array.from(new Set((Array.isArray(months) ? months : []).filter(Boolean)));
+    if (validMonths.length === 0) {
+        return { totalCost: 0, byType: {} };
+    }
     let total = 0;
     const byType = {};
-    snapshot.forEach(docSnap => {
-        const d = docSnap.data() || {};
-        const m = d.month;
-        if (m && months.includes(m)) {
+    const chunkSize = 10;
+    const chunks = [];
+    for (let i = 0; i < validMonths.length; i += chunkSize) {
+        chunks.push(validMonths.slice(i, i + chunkSize));
+    }
+    for (const chunk of chunks) {
+        const colRef = window.firebase.collection(window.firebase.db, 'clinicExpenses');
+        const parts = [window.firebase.where('month', 'in', chunk)];
+        if (clinicId) {
+            parts.push(window.firebase.where('clinicId', '==', clinicId));
+        }
+        let snapshot = null;
+        try {
+            snapshot = await window.firebase.getDocs(window.firebase.firestoreQuery(colRef, ...parts));
+        } catch (_batchErr) {
+            // 若缺少複合索引，退回逐月查詢，仍避免全集合掃描。
+            for (const monthKey of chunk) {
+                const fallbackParts = [window.firebase.where('month', '==', monthKey)];
+                if (clinicId) fallbackParts.push(window.firebase.where('clinicId', '==', clinicId));
+                const fallbackSnap = await window.firebase.getDocs(window.firebase.firestoreQuery(colRef, ...fallbackParts));
+                fallbackSnap.forEach(docSnap => {
+                    const d = docSnap.data() || {};
+                    const amt = Number(d.amount) || 0;
+                    total += amt;
+                    const t = d.type || '其他費用';
+                    byType[t] = (byType[t] || 0) + amt;
+                });
+            }
+            continue;
+        }
+        snapshot.forEach(docSnap => {
+            const d = docSnap.data() || {};
             const amt = Number(d.amount) || 0;
             total += amt;
             const t = d.type || '其他費用';
             byType[t] = (byType[t] || 0) + amt;
-        }
-    });
+        });
+    }
     return { totalCost: total, byType };
 }
 
@@ -19808,7 +20261,7 @@ async function saveClinicExpense() {
     const createdBy = currentUserData ? currentUserData.username : (currentUser || 'system');
     await window.firebase.addDoc(
         window.firebase.collection(window.firebase.db, 'clinicExpenses'),
-        { month, type, amount: Number(amount), note: note || '', createdAt: new Date(), updatedAt: new Date(), createdBy }
+        { month, type, amount: Number(amount), note: note || '', clinicId: currentClinicId || null, clinicName: (clinicSettings && (clinicSettings.chineseName || clinicSettings.englishName)) ? (clinicSettings.chineseName || clinicSettings.englishName) : '', createdAt: new Date(), updatedAt: new Date(), createdBy }
     );
     showToast('成本已儲存', 'success');
     closeExpenseImportModal();
@@ -21110,6 +21563,174 @@ function formatPackageStatus(pkg) {
         : `剩餘 ${pkg.remainingUses}/${pkg.totalUses} 次 · ${exp.toLocaleDateString('zh-TW')} 到期（約 ${daysLeft} 天）`;
 }
 
+async function createManualPatientPackage(patientId) {
+    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) ? localStorage.getItem('lang') : 'zh';
+    const isEn = lang && lang.toLowerCase().startsWith('en');
+    try {
+        if (!Array.isArray(billingItems) || billingItems.length === 0) {
+            await initBillingItems();
+        }
+    } catch (_e) {}
+    const packageItems = (Array.isArray(billingItems) ? billingItems : [])
+        .filter(item => item && item.active !== false && item.category === 'package' && Number(item.packageUses) > 0 && Number(item.validityDays) > 0);
+    if (packageItems.length === 0) {
+        showToast(isEn ? 'No package items in billing settings' : '收費項目中沒有可用的套票項目', 'warning');
+        return;
+    }
+    const options = {};
+    packageItems.forEach(item => {
+        const label = `${item.name || ''} (${Number(item.packageUses) || 0}次 / ${Number(item.validityDays) || 0}天)`;
+        options[String(item.id)] = window.escapeHtml(label);
+    });
+    const pickResult = await Swal.fire({
+        title: isEn ? 'Select package item' : '選擇套票項目',
+        input: 'select',
+        inputOptions: options,
+        inputPlaceholder: isEn ? 'Please select' : '請選擇',
+        showCancelButton: true,
+        confirmButtonText: isEn ? 'Confirm' : '確定',
+        cancelButtonText: isEn ? 'Cancel' : '取消'
+    });
+    if (!pickResult || !pickResult.isConfirmed) {
+        return;
+    }
+    const selectedId = String(pickResult.value || '');
+    const selectedItem = packageItems.find(item => String(item.id) === selectedId);
+    if (!selectedItem) {
+        showToast(isEn ? 'Invalid package item' : '套票項目無效', 'warning');
+        return;
+    }
+    const created = await purchasePackage(patientId, {
+        id: selectedItem.id,
+        name: selectedItem.name,
+        packageUses: Number(selectedItem.packageUses) || 0,
+        validityDays: Number(selectedItem.validityDays) || 0
+    });
+    if (!created) {
+        showToast(isEn ? 'Failed to create package' : '新增套票失敗', 'error');
+        return;
+    }
+    showToast(isEn ? 'Package created' : '已新增套票', 'success');
+    await loadPatientConsultationSummary(patientId);
+    await refreshPatientPackagesUI();
+}
+
+async function updatePatientPackageExpiry(patientId, packageRecordId) {
+    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) ? localStorage.getItem('lang') : 'zh';
+    const isEn = lang && lang.toLowerCase().startsWith('en');
+    const packages = await getPatientPackages(patientId, true);
+    const pkg = Array.isArray(packages) ? packages.find(p => String(p.id) === String(packageRecordId)) : null;
+    if (!pkg) {
+        showToast(isEn ? 'Package not found' : '找不到套票', 'warning');
+        return;
+    }
+    const exp = new Date(pkg.expiresAt);
+    const defaultDate = Number.isNaN(exp.getTime()) ? '' : exp.toISOString().slice(0, 10);
+    const dateResult = await Swal.fire({
+        title: isEn ? 'Update expiry date' : '修改套票有效期',
+        input: 'date',
+        inputValue: defaultDate,
+        showCancelButton: true,
+        confirmButtonText: isEn ? 'Update' : '更新',
+        cancelButtonText: isEn ? 'Cancel' : '取消'
+    });
+    if (!dateResult || !dateResult.isConfirmed) return;
+    const dateText = String(dateResult.value || '').trim();
+    const newExp = new Date(`${dateText}T23:59:59`);
+    if (Number.isNaN(newExp.getTime())) {
+        showToast(isEn ? 'Invalid date' : '日期無效', 'warning');
+        return;
+    }
+    const updatedPackage = {
+        ...pkg,
+        expiresAt: newExp.toISOString()
+    };
+    const result = await window.firebaseDataManager.updatePatientPackage(packageRecordId, updatedPackage);
+    if (!result || !result.success) {
+        showToast(isEn ? 'Failed to update expiry date' : '更新套票有效期失敗', 'error');
+        return;
+    }
+    showToast(isEn ? 'Expiry date updated' : '已更新套票有效期', 'success');
+    await loadPatientConsultationSummary(patientId);
+    await refreshPatientPackagesUI();
+}
+
+async function deletePatientPackageRecord(patientId, packageRecordId) {
+    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) ? localStorage.getItem('lang') : 'zh';
+    const isEn = lang && lang.toLowerCase().startsWith('en');
+    const packages = await getPatientPackages(patientId, true);
+    const pkg = Array.isArray(packages) ? packages.find(p => String(p.id) === String(packageRecordId)) : null;
+    if (!pkg) {
+        showToast(isEn ? 'Package not found' : '找不到套票', 'warning');
+        return;
+    }
+    const ok = await showConfirmation(
+        isEn
+            ? `Delete package "${pkg.name || ''}"?\nThis action cannot be undone.`
+            : `確定要刪除套票「${pkg.name || ''}」嗎？\n此操作無法復原。`,
+        'warning'
+    );
+    if (!ok) return;
+    const result = await window.firebaseDataManager.deletePatientPackage(packageRecordId, patientId);
+    if (!result || !result.success) {
+        showToast(isEn ? 'Failed to delete package' : '刪除套票失敗', 'error');
+        return;
+    }
+    showToast(isEn ? 'Package deleted' : '已刪除套票', 'success');
+    await loadPatientConsultationSummary(patientId);
+    await refreshPatientPackagesUI();
+}
+
+async function updatePatientPackageRemainingUses(patientId, packageRecordId) {
+    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) ? localStorage.getItem('lang') : 'zh';
+    const isEn = lang && lang.toLowerCase().startsWith('en');
+    const packages = await getPatientPackages(patientId, true);
+    const pkg = Array.isArray(packages) ? packages.find(p => String(p.id) === String(packageRecordId)) : null;
+    if (!pkg) {
+        showToast(isEn ? 'Package not found' : '找不到套票', 'warning');
+        return;
+    }
+    const totalUses = Number(pkg.totalUses);
+    const currentRemaining = Number(pkg.remainingUses);
+    const inputResult = await Swal.fire({
+        title: isEn ? 'Update remaining uses' : '修改剩餘次數',
+        input: 'number',
+        inputValue: Number.isFinite(currentRemaining) ? String(currentRemaining) : '0',
+        inputAttributes: {
+            min: '0',
+            step: '1'
+        },
+        showCancelButton: true,
+        confirmButtonText: isEn ? 'Update' : '更新',
+        cancelButtonText: isEn ? 'Cancel' : '取消'
+    });
+    if (!inputResult || !inputResult.isConfirmed) return;
+    const nextRemaining = parseInt(String(inputResult.value || '').trim(), 10);
+    if (!Number.isInteger(nextRemaining) || nextRemaining < 0) {
+        showToast(isEn ? 'Remaining uses must be a non-negative integer' : '剩餘次數必須為 0 或以上的整數', 'warning');
+        return;
+    }
+    if (Number.isFinite(totalUses) && nextRemaining > totalUses) {
+        showToast(
+            isEn ? `Remaining uses cannot exceed total uses (${totalUses})` : `剩餘次數不可大於總次數（${totalUses}）`,
+            'warning'
+        );
+        return;
+    }
+    const updatedPackage = {
+        ...pkg,
+        remainingUses: nextRemaining
+    };
+    const result = await window.firebaseDataManager.updatePatientPackage(packageRecordId, updatedPackage);
+    if (!result || !result.success) {
+        showToast(isEn ? 'Failed to update remaining uses' : '更新剩餘次數失敗', 'error');
+        return;
+    }
+    showToast(isEn ? 'Remaining uses updated' : '已更新剩餘次數', 'success');
+    await loadPatientConsultationSummary(patientId);
+    await refreshPatientPackagesUI();
+}
+
 async function renderPatientPackages(patientId) {
     const container = document.getElementById('patientPackagesList');
     if (!container) return;
@@ -21190,14 +21811,25 @@ async function renderPackageStatusSection(patientId, pageChange = false) {
         // 若無套票資料，顯示提示文字並隱藏分頁控制
         if (!Array.isArray(pkgs) || pkgs.length === 0) {
             contentEl.innerHTML = `
-                <div class="bg-blue-50 border-blue-200 border rounded-lg p-3 text-center">
-                    <div class="text-blue-400 mb-1">
-                        <svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
-                        </svg>
+                <div class="space-y-3">
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            onclick="createManualPatientPackage('${patientId}')"
+                            class="px-3 py-1.5 text-sm rounded bg-purple-600 text-white hover:bg-purple-700"
+                        >
+                            新增套票
+                        </button>
                     </div>
-                    <div class="text-sm font-medium text-blue-700">尚未購買套票</div>
-                    <div class="text-xs text-blue-600 mt-1">可於診療時購買套票享優惠</div>
+                    <div class="bg-blue-50 border-blue-200 border rounded-lg p-3 text-center">
+                        <div class="text-blue-400 mb-1">
+                            <svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="text-sm font-medium text-blue-700">尚未購買套票</div>
+                        <div class="text-xs text-blue-600 mt-1">可於診療時購買套票享優惠</div>
+                    </div>
                 </div>
             `;
             // 移除分頁容器
@@ -21249,6 +21881,17 @@ async function renderPackageStatusSection(patientId, pageChange = false) {
         let htmlParts = [];
         // 使用一個垂直容器，依序渲染有效與失效套票
         htmlParts.push('<div class="space-y-4">');
+        htmlParts.push(`
+            <div class="flex justify-end">
+                <button
+                    type="button"
+                    onclick="createManualPatientPackage('${patientId}')"
+                    class="px-3 py-1.5 text-sm rounded bg-purple-600 text-white hover:bg-purple-700"
+                >
+                    新增套票
+                </button>
+            </div>
+        `);
         // 有效套票列表
         if (pageValid.length > 0) {
             htmlParts.push('<div class="font-medium text-gray-700 mb-2">有效套票</div>');
@@ -21273,7 +21916,32 @@ async function renderPackageStatusSection(patientId, pageChange = false) {
                             <div class="font-medium ${nameClass}">${safePkgName}</div>
                             <div class="text-xs ${statusClass}">${safeStatusText}</div>
                         </div>
-                        <div class="text-sm ${usesClass}">${remainingUses}${totalUses !== '' ? '/' + totalUses : ''}</div>
+                        <div class="text-right">
+                            <div class="text-sm ${usesClass} mb-1">${remainingUses}${totalUses !== '' ? '/' + totalUses : ''}</div>
+                            <div class="flex items-center justify-end gap-1">
+                                <button
+                                    type="button"
+                                    onclick="updatePatientPackageRemainingUses('${patientId}', '${pkg.id}')"
+                                    class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
+                                >
+                                    修改剩餘次數
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="updatePatientPackageExpiry('${patientId}', '${pkg.id}')"
+                                    class="px-2 py-1 text-xs rounded bg-amber-500 text-white hover:bg-amber-600"
+                                >
+                                    修改有限期
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="deletePatientPackageRecord('${patientId}', '${pkg.id}')"
+                                    class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                                >
+                                    刪除
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `);
             });
@@ -21295,7 +21963,32 @@ async function renderPackageStatusSection(patientId, pageChange = false) {
                             <div class="font-medium text-gray-500">${safePkgName}</div>
                             <div class="text-xs text-gray-400">${safeStatusText}</div>
                         </div>
-                        <div class="text-sm text-gray-500">${remainingUses}${totalUses !== '' ? '/' + totalUses : ''}</div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 mb-1">${remainingUses}${totalUses !== '' ? '/' + totalUses : ''}</div>
+                            <div class="flex items-center justify-end gap-1">
+                                <button
+                                    type="button"
+                                    onclick="updatePatientPackageRemainingUses('${patientId}', '${pkg.id}')"
+                                    class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
+                                >
+                                    修改剩餘次數
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="updatePatientPackageExpiry('${patientId}', '${pkg.id}')"
+                                    class="px-2 py-1 text-xs rounded bg-amber-500 text-white hover:bg-amber-600"
+                                >
+                                    修改有限期
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="deletePatientPackageRecord('${patientId}', '${pkg.id}')"
+                                    class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                                >
+                                    刪除
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `);
             });
@@ -21751,13 +22444,17 @@ class FirebaseDataManager {
             } catch (_e) {
                 dataToWrite = clinicData;
             }
-            await window.firebase.updateDoc(
-                window.firebase.doc(window.firebase.db, 'clinics', id),
-                {
-                    ...dataToWrite,
-                    updatedAt: new Date()
-                }
-            );
+            const clinicDocRef = window.firebase.doc(window.firebase.db, 'clinics', id);
+            const payload = {
+                ...dataToWrite,
+                updatedAt: new Date()
+            };
+            try {
+                await window.firebase.updateDoc(clinicDocRef, payload);
+            } catch (_updateErr) {
+                // 若文件尚未建立（例如 local-default 初始診所），改用 merge upsert。
+                await window.firebase.setDoc(clinicDocRef, payload, { merge: true });
+            }
             return { success: true };
         } catch (err) {
             return { success: false, error: err && err.message ? err.message : String(err) };
@@ -22217,7 +22914,7 @@ class FirebaseDataManager {
         }
     }
 
-    async getConsultationsByRangeAndDoctor(startDateStr, endDateStr, doctorFilter = null, completedOnly = true) {
+    async getConsultationsByRangeAndDoctor(startDateStr, endDateStr, doctorFilter = null, completedOnly = true, clinicFilter = null) {
         if (!this.isReady) return { success: false, data: [] };
         try {
             const colRef = window.firebase.collection(window.firebase.db, 'consultations');
@@ -22242,46 +22939,54 @@ class FirebaseDataManager {
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);
             const pageSize = 100;
-            const parts = [];
-            if (completedOnly) parts.push(window.firebase.where('status', '==', 'completed'));
-            if (doctorFilter) parts.push(window.firebase.where('doctor', '==', doctorFilter));
-            parts.push(window.firebase.orderBy('date', 'asc'));
-            parts.push(window.firebase.where('date', '>=', start));
-            parts.push(window.firebase.where('date', '<=', end));
-            parts.push(window.firebase.limit(pageSize));
-            let q = window.firebase.firestoreQuery(colRef, ...parts);
-            let snap = await window.firebase.getDocs(q);
-            const list = [];
-            snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-            let lastVisible = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
-            while (snap.docs.length === pageSize && lastVisible) {
-                const nextParts = [];
-                if (completedOnly) nextParts.push(window.firebase.where('status', '==', 'completed'));
-                if (doctorFilter) nextParts.push(window.firebase.where('doctor', '==', doctorFilter));
-                nextParts.push(window.firebase.orderBy('date', 'asc'));
-                nextParts.push(window.firebase.where('date', '>=', start));
-                nextParts.push(window.firebase.where('date', '<=', end));
-                nextParts.push(window.firebase.startAfter(lastVisible));
-                nextParts.push(window.firebase.limit(pageSize));
-                q = window.firebase.firestoreQuery(colRef, ...nextParts);
-                snap = await window.firebase.getDocs(q);
+            const baseParts = [];
+            if (completedOnly) baseParts.push(window.firebase.where('status', '==', 'completed'));
+            if (doctorFilter) baseParts.push(window.firebase.where('doctor', '==', doctorFilter));
+            if (clinicFilter) baseParts.push(window.firebase.where('clinicId', '==', clinicFilter));
+            const runRangeQuery = async (fieldName, startValue, endValue) => {
+                const list = [];
+                let q = window.firebase.firestoreQuery(
+                    colRef,
+                    ...baseParts,
+                    window.firebase.orderBy(fieldName, 'asc'),
+                    window.firebase.where(fieldName, '>=', startValue),
+                    window.firebase.where(fieldName, '<=', endValue),
+                    window.firebase.limit(pageSize)
+                );
+                let snap = await window.firebase.getDocs(q);
                 snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-                lastVisible = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
-            }
-            return { success: true, data: list };
-        } catch (error) {
-            console.warn('目標條件查詢失敗，改用完整載入:', error);
-            try {
-                let res = await this.getConsultations(true);
-                if (!res || !res.success) return { success: false, data: [] };
-                while (res.hasMore) {
-                    res = await this.getConsultationsNextPage();
-                    if (!res || !res.success) break;
+                let lastVisible = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+                while (snap.docs.length === pageSize && lastVisible) {
+                    q = window.firebase.firestoreQuery(
+                        colRef,
+                        ...baseParts,
+                        window.firebase.orderBy(fieldName, 'asc'),
+                        window.firebase.where(fieldName, '>=', startValue),
+                        window.firebase.where(fieldName, '<=', endValue),
+                        window.firebase.startAfter(lastVisible),
+                        window.firebase.limit(pageSize)
+                    );
+                    snap = await window.firebase.getDocs(q);
+                    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+                    lastVisible = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
                 }
-                return { success: true, data: Array.isArray(this.consultationsCache) ? this.consultationsCache.slice() : [] };
-            } catch (_e) {
-                return { success: false, data: [] };
-            }
+                return list;
+            };
+            // 同時以 date 與 createdAt 範圍查詢並合併：
+            // 歷史資料可能存在欄位型別不一致（例如 date 為字串或缺失），
+            // 若僅在 date 為 0 筆才回退，會出現「只看到今天」的斷層。
+            // 這裡維持條件查詢（不做全量掃描），再以 id 去重。
+            const listByDate = await runRangeQuery('date', start, end);
+            const listByCreatedAt = await runRangeQuery('createdAt', start, end);
+            const mergedMap = new Map();
+            [...listByDate, ...listByCreatedAt].forEach(item => {
+                if (!item || item.id === undefined || item.id === null) return;
+                mergedMap.set(String(item.id), item);
+            });
+            return { success: true, data: Array.from(mergedMap.values()) };
+        } catch (error) {
+            console.warn('目標條件查詢失敗（已停用全量回退）:', error);
+            return { success: false, data: [], error: 'targeted-query-failed' };
         }
     }
 
@@ -22329,16 +23034,19 @@ class FirebaseDataManager {
         }
     }
 
-    async getConsultationsDeltaByRangeAndDoctor(sinceDate, doctorFilter = null, completedOnly = true) {
+    async getConsultationsDeltaByRangeAndDoctor(sinceDate, doctorFilter = null, completedOnly = true, clinicFilter = null) {
         if (!this.isReady) return { success: false, data: [] };
         try {
             const colRef = window.firebase.collection(window.firebase.db, 'consultations');
             const pageSize = 100;
             const list = [];
+            const q1Parts = [];
+            if (completedOnly) q1Parts.push(window.firebase.where('status', '==', 'completed'));
+            if (doctorFilter) q1Parts.push(window.firebase.where('doctor', '==', doctorFilter));
+            if (clinicFilter) q1Parts.push(window.firebase.where('clinicId', '==', clinicFilter));
             let q1 = window.firebase.firestoreQuery(
                 colRef,
-                completedOnly ? window.firebase.where('status', '==', 'completed') : window.firebase.where('status', '>=', ''),
-                doctorFilter ? window.firebase.where('doctor', '==', doctorFilter) : window.firebase.where('doctor', '>=', ''),
+                ...q1Parts,
                 window.firebase.where('updatedAt', '>', sinceDate),
                 window.firebase.orderBy('updatedAt', 'asc'),
                 window.firebase.limit(pageSize)
@@ -22349,8 +23057,7 @@ class FirebaseDataManager {
             while (snap1.docs.length === pageSize && last1) {
                 q1 = window.firebase.firestoreQuery(
                     colRef,
-                    completedOnly ? window.firebase.where('status', '==', 'completed') : window.firebase.where('status', '>=', ''),
-                    doctorFilter ? window.firebase.where('doctor', '==', doctorFilter) : window.firebase.where('doctor', '>=', ''),
+                    ...q1Parts,
                     window.firebase.where('updatedAt', '>', sinceDate),
                     window.firebase.orderBy('updatedAt', 'asc'),
                     window.firebase.startAfter(last1),
@@ -22360,10 +23067,13 @@ class FirebaseDataManager {
                 snap1.forEach(d => list.push({ id: d.id, ...d.data() }));
                 last1 = snap1.docs.length ? snap1.docs[snap1.docs.length - 1] : null;
             }
+            const q2Parts = [];
+            if (completedOnly) q2Parts.push(window.firebase.where('status', '==', 'completed'));
+            if (doctorFilter) q2Parts.push(window.firebase.where('doctor', '==', doctorFilter));
+            if (clinicFilter) q2Parts.push(window.firebase.where('clinicId', '==', clinicFilter));
             let q2 = window.firebase.firestoreQuery(
                 colRef,
-                completedOnly ? window.firebase.where('status', '==', 'completed') : window.firebase.where('status', '>=', ''),
-                doctorFilter ? window.firebase.where('doctor', '==', doctorFilter) : window.firebase.where('doctor', '>=', ''),
+                ...q2Parts,
                 window.firebase.where('createdAt', '>', sinceDate),
                 window.firebase.orderBy('createdAt', 'asc'),
                 window.firebase.limit(pageSize)
@@ -22374,8 +23084,7 @@ class FirebaseDataManager {
             while (snap2.docs.length === pageSize && last2) {
                 q2 = window.firebase.firestoreQuery(
                     colRef,
-                    completedOnly ? window.firebase.where('status', '==', 'completed') : window.firebase.where('status', '>=', ''),
-                    doctorFilter ? window.firebase.where('doctor', '==', doctorFilter) : window.firebase.where('doctor', '>=', ''),
+                    ...q2Parts,
                     window.firebase.where('createdAt', '>', sinceDate),
                     window.firebase.orderBy('createdAt', 'asc'),
                     window.firebase.startAfter(last2),
@@ -22465,7 +23174,7 @@ class FirebaseDataManager {
         }
     }
 
-    async hasConsultationUpdates(startDateStr, endDateStr, doctorFilter = null, sinceDate) {
+    async hasConsultationUpdates(startDateStr, endDateStr, doctorFilter = null, sinceDate, clinicFilter = null) {
         if (!this.isReady) return false;
         try {
             const colRef = window.firebase.collection(window.firebase.db, 'consultations');
@@ -22475,6 +23184,7 @@ class FirebaseDataManager {
             end.setHours(23, 59, 59, 999);
             const parts = [];
             if (doctorFilter) parts.push(window.firebase.where('doctor', '==', doctorFilter));
+            if (clinicFilter) parts.push(window.firebase.where('clinicId', '==', clinicFilter));
             parts.push(window.firebase.where('date', '>=', start));
             parts.push(window.firebase.where('date', '<=', end));
             if (sinceDate) parts.push(window.firebase.where('updatedAt', '>', sinceDate));
@@ -22486,6 +23196,7 @@ class FirebaseDataManager {
             if (sinceDate) {
                 const parts2 = [];
                 if (doctorFilter) parts2.push(window.firebase.where('doctor', '==', doctorFilter));
+                if (clinicFilter) parts2.push(window.firebase.where('clinicId', '==', clinicFilter));
                 parts2.push(window.firebase.where('date', '>=', start));
                 parts2.push(window.firebase.where('date', '<=', end));
                 parts2.push(window.firebase.where('createdAt', '>', sinceDate));
@@ -23107,6 +23818,39 @@ class FirebaseDataManager {
         }
     }
 
+    async deletePatientPackage(packageId, patientId = '') {
+        try {
+            await window.firebase.deleteDoc(
+                window.firebase.doc(window.firebase.db, 'patientPackages', packageId)
+            );
+            try {
+                const pidStr = String(patientId || '');
+                if (pidStr && patientPackagesCache && Array.isArray(patientPackagesCache[pidStr])) {
+                    patientPackagesCache[pidStr] = patientPackagesCache[pidStr].filter(p => String(p.id) !== String(packageId));
+                    try {
+                        const localKey = `patientPackages_${pidStr}`;
+                        localStorage.setItem(localKey, JSON.stringify(patientPackagesCache[pidStr]));
+                    } catch (e) {
+                        console.warn('更新本地患者套票資料失敗:', e);
+                    }
+                }
+            } catch (cacheErr) {
+                console.warn('刪除套票後更新本地快取失敗:', cacheErr);
+            }
+            try {
+                if (patientId) {
+                    await this.updatePatientPackageAggregates(patientId);
+                }
+            } catch (aggErr) {
+                console.error('刪除套票後更新套票彙總欄位失敗:', aggErr);
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('刪除患者套票失敗:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     /**
      * 更新指定病人文件的套票彙總欄位。
      * 彙總欄位包括：
@@ -23699,13 +24443,37 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const switchBtn = document.getElementById('clinicSwitchButton');
             if (switchBtn && !switchBtn.dataset.bound) {
-                switchBtn.addEventListener('click', function () {
+                switchBtn.addEventListener('click', async function () {
                     try {
-                        const modal = document.getElementById('clinicSwitchModal');
-                        if (modal) {
-                            modal.classList.remove('hidden');
-                            try { if (typeof populateClinicSelectors === 'function') populateClinicSelectors(); } catch (_e) {}
+                        try { if (typeof populateClinicSelectors === 'function') populateClinicSelectors(); } catch (_e) {}
+                        const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang')) ? localStorage.getItem('lang') : 'zh';
+                        const isEn = lang && lang.toLowerCase().startsWith('en');
+                        const options = {};
+                        const availableClinics = Array.isArray(clinicsList) ? clinicsList : [];
+                        availableClinics.forEach(c => {
+                            if (!c || !c.id) return;
+                            options[String(c.id)] = window.escapeHtml(getClinicDisplayName(c));
+                        });
+                        if (Object.keys(options).length === 0) {
+                            showToast(isEn ? 'No clinic available' : '目前沒有可切換的診所', 'warning');
+                            return;
                         }
+                        const picked = await Swal.fire({
+                            title: isEn ? 'Switch clinic' : '切換診所',
+                            input: 'select',
+                            inputOptions: options,
+                            inputValue: currentClinicId ? String(currentClinicId) : '',
+                            inputPlaceholder: isEn ? 'Please select' : '請選擇',
+                            showCancelButton: true,
+                            confirmButtonText: isEn ? 'Switch' : '切換',
+                            cancelButtonText: isEn ? 'Cancel' : '取消'
+                        });
+                        if (!picked || !picked.isConfirmed) return;
+                        const targetClinicId = String(picked.value || '');
+                        if (!targetClinicId || String(targetClinicId) === String(currentClinicId || '')) {
+                            return;
+                        }
+                        await setCurrentClinicId(targetClinicId);
                     } catch (e) {
                         console.error('切換診所按鈕事件錯誤:', e);
                     }
@@ -25178,7 +25946,10 @@ async function deleteMedicalRecord(recordId) {
   window.closePatientMedicalHistoryModal = closePatientMedicalHistoryModal;
   window.closeRegistrationModal = closeRegistrationModal;
   window.confirmRegistration = confirmRegistration;
-  window.exportFinancialReport = exportFinancialReport;
+  window.exportFinancialReportTxt = exportFinancialReportTxt;
+  window.exportFinancialReportExcel = exportFinancialReportExcel;
+  // 向下相容：舊呼叫仍預設匯出 TXT
+  window.exportFinancialReport = exportFinancialReportTxt;
   window.exportClinicBackup = exportClinicBackup;
   window.triggerBackupImport = triggerBackupImport;
   window.handleBackupFile = handleBackupFile;
@@ -25222,8 +25993,13 @@ async function deleteMedicalRecord(recordId) {
   window.loadPreviousPrescription = loadPreviousPrescription;
   window.logout = logout;
   window.refreshPatientPackagesUI = refreshPatientPackagesUI;
+  window.createManualPatientPackage = createManualPatientPackage;
+  window.updatePatientPackageExpiry = updatePatientPackageExpiry;
+  window.updatePatientPackageRemainingUses = updatePatientPackageRemainingUses;
+  window.deletePatientPackageRecord = deletePatientPackageRecord;
   window.saveBillingItem = saveBillingItem;
   window.saveClinicSettings = saveClinicSettings;
+  window.saveReceiptCustomizationSettings = saveReceiptCustomizationSettings;
   window.saveConsultation = saveConsultation;
   window.saveFormula = saveFormula;
   window.saveHerb = saveHerb;
