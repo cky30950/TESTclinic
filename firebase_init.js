@@ -1,7 +1,6 @@
 
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore,
   collection,
   addDoc,
   getDocs,
@@ -16,6 +15,7 @@ import {
   getCountFromServer,
   startAfter,
   getDoc,
+  runTransaction,
   
   initializeFirestore,
   persistentLocalCache,
@@ -23,13 +23,16 @@ import {
   persistentMultipleTabManager
   ,
   
-  writeBatch
+  writeBatch,
+  FieldValue
   
   , onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getDatabase, ref, set, get, update, remove, onValue, off,
         
         onDisconnect,
+        push,
+        serverTimestamp,
         
         query as rtdbQuery,
         orderByChild,
@@ -92,6 +95,9 @@ setPersistence(auth, browserSessionPersistence).catch((error) => {
         
         writeBatch,
         
+        FieldValue,
+        increment: FieldValue.increment,
+
         firestoreQuery: query,
         where,
         orderBy,
@@ -99,6 +105,7 @@ setPersistence(auth, browserSessionPersistence).catch((error) => {
         startAfter,   
         getDoc,       
         getCountFromServer,
+        runTransaction,
         
         onSnapshot,
         
@@ -111,6 +118,8 @@ setPersistence(auth, browserSessionPersistence).catch((error) => {
         off,
         
         onDisconnect,
+        push,
+        serverTimestamp,
         
         rtdbQuery,
         
